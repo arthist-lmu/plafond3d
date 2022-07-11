@@ -6,6 +6,10 @@ The project will produce of a website, which combines different data sources for
 
 The code in this repository is about the data refinement and matching.
 
+# Setup
+
+Use a python [venv](https://docs.python.org/3/library/venv.html) and set up [poetry](https://python-poetry.org/) to get started.
+
 The web scraper is using selenium, and therefore needs to be configured before running it. Download your correct geckodriver [here](https://github.com/mozilla/geckodriver/releases).
 
 # Data sources
