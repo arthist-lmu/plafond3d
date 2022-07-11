@@ -2,7 +2,9 @@ import requests
 import requests_cache
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 import os
+import time
 
 
 requests_cache.install_cache('scrape_cache')
@@ -33,9 +35,16 @@ for x in range(1, 2):
     print(url)
     #r = requests.get(url, timeout=(3, 27))
     os.environ["TMPDIR"] = "tmp"
-
-    browser = webdriver.Firefox(executable_path=r'./geckodriver')
+    
+    options = Options()
+    options.add_argument("--headless")
+    browser = webdriver.Firefox(options=options, executable_path=r'./geckodriver')
     browser.get(url)
     html = browser.page_source
-    extract_contents(r)
+    time.sleep(2)
+    print(html)
+
+    # close web browser
+    browser.close()
+    #extract_contents(r)
     #soup = BeautifulSoup(html, 'lxml')
