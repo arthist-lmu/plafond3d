@@ -1,0 +1,6 @@
+venv
+/tmp/*
+!/tmp/.gitkeep
+*.log
+*.sqlite
+geckodriver
