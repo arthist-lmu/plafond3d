@@ -6,10 +6,10 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-requests = "^2.28.0"
+requests = "^2.28.1"
 bs4 = "^0.0.1"
-requests-cache = "^0.9.4"
-selenium = "^4.2.0"
+requests-cache = "^0.9.7"
+selenium = "^4.6.0"
 lxml = "^4.9.1"
 
 [tool.poetry.dev-dependencies]
