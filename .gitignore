@@ -4,3 +4,5 @@ venv
 *.log
 *.sqlite
 geckodriver
+/.project
+/.pydevproject
