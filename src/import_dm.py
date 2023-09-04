@@ -52,7 +52,7 @@ class DM_Importer (Importer):
                     "dating_start_approx" : ["verbaleDating", "get_year_approx"],
                     "dating_end": ["verbaleDating", "get_end_year"],
                     "dating_end_approx" : ["verbaleDating", "get_year_approx"],
-                    "url_photo" : "leadImg"
+                    #"url_photo" : "leadImg"
                 },
                 "lists" : {
                     "building_function_join": ["functions", "id_building_function", "building_functions", "name_deckenmalerei = %s", None]
@@ -79,7 +79,7 @@ class DM_Importer (Importer):
                     "dating_start_approx" : ["verbaleDating", "get_year_approx"],
                     "dating_end": ["verbaleDating", "get_end_year"],
                     "dating_end_approx" : ["verbaleDating", "get_year_approx"],
-                    "url_photo" : "leadImg"
+                    #"url_photo" : "leadImg"
                 },
                 "lists" : {
                     "room_function_join": ["functions", "id_room_function", "room_functions", "name_deckenmalerei = %s", None]
@@ -105,7 +105,7 @@ class DM_Importer (Importer):
                     "dating_end_approx" : ["verbaleDating", "get_year_approx"],
                     "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields"],
                     "condition" : [("conditionDestroyed", "conditionDamaged", "conditionPaintedOver", "conditionTranslocated", "conditionMissing"), "combine_to_single_field"],
-                    "url_photo" : "leadImg",
+                    #"url_photo" : "leadImg",
                     "signature" : "signature"
                 },
                 "lists" : {

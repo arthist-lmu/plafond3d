@@ -61,7 +61,9 @@ class Heurist_Importer (Importer):
                     "dating_start_approx": ["Date inférieure / Frühestes Datum", "handle_approx"],
                     "dating_end_approx": ["Date supérieure / Spätestes Datum", "handle_approx"]
                 },
-                "lists" : {},
+                "lists" : {
+                    "building_function_join": ["Fonction / Funktion", "id_building_function", "building_functions", "name_heurist = %s", None]
+                },
                 "connections" : {},
                 "auto_columns" : {
                     "source": "heurist"
@@ -85,7 +87,9 @@ class Heurist_Importer (Importer):
                     "dating_end_approx": ["Date supérieure pièce / spätestes Datum", "handle_approx"],
                     "url_photo" : ["URL photo", "first_in_list"],
                 },
-                "lists" : {},
+                "lists" : {
+                    "room_function_join": ["Fonction au moment du décor", "id_room_function", "room_functions", "name_heurist = %s", None]
+                },
                 "connections" : {
                     "room_person_join" : [["Personne"], "connection_type", "id_person", "persons"]
                 },
