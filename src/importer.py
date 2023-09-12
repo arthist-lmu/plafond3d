@@ -658,7 +658,7 @@ class Importer:
         for ename in self.object_table_mapping:
             if self.object_table_mapping[ename]["name"] == table:
                 return self.object_table_mapping[ename]
-            
+        
     def get_first_name (self, full_name, dbname, table, field):
         return self.handle_name(full_name, dbname, table, field)[0]
 

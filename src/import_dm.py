@@ -111,7 +111,9 @@ class DM_Importer (Importer):
                 "lists" : {
                     "plafond_iconclass_join": ["iconography", "iconclass_id", "iconclasses", "iconclass_id = %s", "create_iconclass"]
                 },
-                "connections" : {},
+                "connections" : {
+                    "plafond_person_join" : [["OBJ#PERSON"], "connection_type", "id_person", "persons"]
+                },
                 "auto_columns" : {
                     "source": "deckenmalerei"
                 },
@@ -190,6 +192,9 @@ class DM_Importer (Importer):
         query = "SELECT ?item WHERE {?item wdt:P227 '" + gnd + "'.}"
         json_result = self.sparql_wikidata(query)
         
+        if json_result == None:
+            return None
+        
         if len(json_result["results"]["bindings"]) == 1:
             return json_result["results"]["bindings"][0]["item"]["value"].rsplit("/", 1)[-1]
         return None
@@ -234,4 +239,4 @@ class DM_Importer (Importer):
     
 if __name__ == "__main__":
     importer = DM_Importer()
-    importer.do_import()
+    importer.do_import("OBJ#PAINTING")

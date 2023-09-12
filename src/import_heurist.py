@@ -1,7 +1,7 @@
 from src.importer import Importer, not_inferred
 import re
-from pyreadline3.configuration import startup
-from pandas.io.sas.sas_constants import align_1_checker_value
+from overrides import override
+from memoization import cached
 
 class Heurist_Importer (Importer):
     def __init__ (self):
@@ -32,10 +32,10 @@ class Heurist_Importer (Importer):
                 "name" : "persons",
                 "primary_key": "id_person",
                 "import_columns": {
-                    "full_name": "full_name",
+                    "full_name": ["full_name", "handle_full_name"],
                     "first_name" : ["full_name", "get_first_name"],
                     "last_name" : ["full_name", "get_last_name"],
-                    "wikidata_id" : "qid"
+                    "wikidata_id" : ["qid", "handle_qid"]
                 },
                 "lists" : {},
                 "connections" : {},
@@ -280,6 +280,36 @@ class Heurist_Importer (Importer):
     
     def get_conn_name_from_type (self, full_name):
         return full_name
+    
+    @not_inferred
+    def handle_full_name (self, full_name, dbname, table, field):
+        return self.remove_brackets_from_name(full_name)
+    
+    def remove_brackets_from_name (self, full_name):
+        if full_name[-1] == ")":
+            full_name = full_name[0: full_name.rfind(" (")]
+            
+        return full_name
+    
+    @cached
+    @override
+    def handle_name (self, full_name, dbname, table, field):
+        if full_name == None:
+            return (None,None)
+        
+        full_name = self.remove_brackets_from_name(full_name)
+        
+        return super().handle_name(full_name, dbname, table, field)
+    
+    @not_inferred
+    def handle_qid (self, qid, dbname, table, field):
+        if qid == None:
+            return None
+                    
+        if re.match("^Q[0-9]+$", qid):
+            return qid
+        
+        return None
     
 if __name__ == "__main__":
     importer = Heurist_Importer()
