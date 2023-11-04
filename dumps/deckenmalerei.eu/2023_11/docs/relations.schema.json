@@ -1,0 +1,42 @@
+{
+  "$id": "http://deckenmalerei.eu/export/relations.schema.json",
+  "title": "CbDD-Relationen",
+  "description": "alle Relationen des CbDD",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "description": "Relation im CbDD",
+    "additionalProperties": false,
+    "properties": {
+      "ID": {
+        "type": "string",
+        "description": "Start der Relation (UUID der Entität im CbDD oder externe URI)"
+      },
+      "mType": {
+        "type": "string",
+        "description": "Haupttyp, bei Relationen immer: REL"
+      },
+      "sType": {
+        "type": "string",
+        "description": "Typ der Relation"
+      },
+      "relTar": {
+        "type": "string",
+        "description": "Ziel der Relation (UUID der Entität im CbDD oder externe URI)"
+      },
+      "relDir": {
+        "type": "string",
+        "description": "Richtung der Relation (->,<-)"
+      },
+      "relOrd": {
+        "type": "number",
+        "description": "Index der Sortierung der Relation (optional)"
+      },
+      "creationDate": {
+        "type": "number",
+        "description": "Zeitstempel der Erstellung der Relation"
+      }
+    },
+    "required": [ "ID", "mType", "sType", "relTar", "relDir", "creationDate"]
+  }
+}

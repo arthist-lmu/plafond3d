@@ -1,0 +1,256 @@
+{
+  "$id": "http://deckenmalerei.eu/export/entities.schema.json",
+  "title": "CbDD-Entitäten",
+  "description": "alle Entitäten des CbDD",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "description": "Entitäten im CbDD",
+    "additionalProperties": false,
+    "properties": {
+      "ID": {
+        "type": "string",
+        "description": "ID der Entität (UUID der Entität im CbDD oder externe URI)"
+      },
+      "mType": {
+        "type": "string",
+        "description": "Haupttyp, bei Entitäten immer: ENT"
+      },
+      "sType": {
+        "type": "string",
+        "description": "Typ der Entität"
+      },
+      "creationDate": {
+        "type": "number",
+        "description": "Zeitstempel der Erstellung der Entität"
+      },
+      "modificationDate": {
+        "type": "number",
+        "description": "Zeitstempel der letzten Änderung an der Entität"
+      },
+      "appellation": {
+        "type": "string",
+        "description": "Titel der Entität"
+      },
+      "alternativeNames": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "alternative Bezeichnungen"
+      },
+      "normdata": {
+        "type": "object",
+        "description": "Normdaten",
+        "additionalProperties": false,
+        "properties": {
+          "gnd": {
+            "type": "string",
+            "description": "GND-Nummer"
+          },
+          "bildindex": {
+            "type": "string",
+            "description": "Objekt-Nummer im Bildindex (Entitäten: alle Objekte)"
+          }
+        }
+      },
+      "shortText": {
+        "type": "string",
+        "description": "Kurztext (Entitäten sType = TEXT)"
+      },
+      "bibliography": {
+        "type": "string",
+        "description": "Bibliographie (Entitäten sType = TEXT)"
+      },
+      "text": {
+        "type": "string",
+        "description": "Text in reduziertem HTML-Format (Entitäten sType = TEXT_PART)"
+      },
+      "gender": {
+        "type": "string",
+        "description": "Geschlecht: divers, männlich, weiblich (Entitäten sType = PERSON)"
+      },
+      "verbaleDating": {
+        "type": "string",
+        "description": "verbale Beschreibung des Zeitraums / Datums (Entitäten: alle Objekte)"
+      },
+      "condition": {
+        "type": "object",
+        "description": "Zustand (Entitäten: alle Objekte)",
+        "additionalProperties": false,
+        "properties": {
+          "damaged": {
+            "type": "boolean",
+            "description": "beschädigt"
+          },
+          "destroyed": {
+            "type": "boolean",
+            "description": "zerstört"
+          },
+          "translocated": {
+            "type": "boolean",
+            "description": "transloziert"
+          },
+          "missing": {
+            "type": "boolean",
+            "description": "verschollen"
+          },
+          "paintedOver": {
+            "type": "boolean",
+            "description": "überfasst"
+          },
+          "restored": {
+            "type": "boolean",
+            "description": "stark verändert / restauriert"
+          }
+        }
+      },
+      "functions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Funktion des Objekts (Entitäten: alle Objekte)"
+      },
+      "addressCountry": {
+        "type": "string",
+        "description": "Land (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "addressState": {
+        "type": "string",
+        "description": "Bundesland (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "addressLocality": {
+        "type": "string",
+        "description": "Ort (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "addressZip": {
+        "type": "string",
+        "description": "Postleitzahl (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "addressStreet": {
+        "type": "string",
+        "description": "Straße (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "locationLng": {
+        "type": "number",
+        "description": "Längengrad (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "locationLat": {
+        "type": "number",
+        "description": "Breitengrad (Entitäten sType = ENSEMBLE oder BUILDING)"
+      },
+      "moduleNumber": {
+        "type": "number",
+        "description": "Modulnummer, der Erfassung des Gebäudes im CbDD (Entitäten sType = BUILDING)"
+      },
+      "buildingInventoryNumber": {
+        "type": "string",
+        "description": "Gebäudeinventarnummer im CbDD (Entitäten sType = BUILDING)"
+      },
+      "dimension": {
+        "type": "object",
+        "description": "Maße des Objekts (Entitäten sType = ROOM, PAINTING oder PAINTING_PART)",
+        "additionalProperties": false,
+        "properties": {
+          "length": {
+            "type": "number",
+            "description": "Länge (m)"
+          },
+          "width": {
+            "type": "number",
+            "description": "Breite (m)"
+          },
+          "height": {
+            "type": "number",
+            "description": "Höhe (m)"
+          },
+          "diameter": {
+            "type": "number",
+            "description": "Durchmesser (m)"
+          }
+        }
+      },
+      "roomNumber": {
+        "type": "string",
+        "description": "Raumnummer (Entitäten sType = ROOM)"
+      },
+      "iconography": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Ikonographie in Iconclassnotation (Entitäten sType = PICTURE_CYCLE, PAINTING oder PAINTING_PART)"
+      },
+      "primaryIconography": {
+        "type": "string",
+        "description": "Hauptikonographie in Iconclassnotation (Entitäten sType = PICTURE_CYCLE, PAINTING oder PAINTING_PART)"
+      },
+      "position": {
+        "type": "object",
+        "description": "Position des Objekts (Entitäten sType = PICTURE_CYCLE, PAINTING oder PAINTING_PART)",
+        "additionalProperties": false,
+        "properties": {
+          "ceiling": {
+            "type": "boolean",
+            "description": "Decke"
+          },
+          "wall": {
+            "type": "boolean",
+            "description": "Wand"
+          },
+          "equipment": {
+            "type": "boolean",
+            "description": "auf Einrichtung und Ausstattung"
+          }
+        }
+      },
+      "orientation": {
+        "type": "object",
+        "description": "Ausrichtung (Entitäten sType = PICTURE_CYCLE, PAINTING oder PAINTING_PART)",
+        "additionalProperties": false,
+        "properties": {
+          "north": {
+            "type": "boolean",
+            "description": "Norden"
+          },
+          "south": {
+            "type": "boolean",
+            "description": "Süden"
+          },
+          "east": {
+            "type": "boolean",
+            "description": "Osten"
+          },
+          "west": {
+            "type": "boolean",
+            "description": "Westen"
+          },
+          "center": {
+            "type": "boolean",
+            "description": "Mitte"
+          }
+        }
+      },
+      "productionMaterials": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Material (Entitäten sType = PAINTING oder PAINTING_PART)"
+      },
+      "productionMethods": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Technik (Entitäten sType = PAINTING oder PAINTING_PART)"
+      },
+      "signature": {
+        "type": "string",
+        "description": "Signatur (Entitäten sType = PAINTING oder PAINTING_PART)"
+      }
+    },
+    "required": [ "ID", "mType", "sType", "creationDate", "modificationDate"]
+  }
+}

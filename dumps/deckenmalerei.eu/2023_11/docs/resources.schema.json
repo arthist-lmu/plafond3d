@@ -1,0 +1,50 @@
+{
+  "$id": "http://deckenmalerei.eu/export/resources.schema.json",
+  "title": "CbDD-Ressourcen",
+  "description": "alle Metadaten der Ressourcen des CbDD",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "description": "Metadaten der Ressourcen im CbDD",
+    "additionalProperties": false,
+    "properties": {
+      "ID": {
+        "type": "string",
+        "description": "ID der Ressource (UUID der Entität im CbDD oder externe URI)"
+      },
+      "mType": {
+        "type": "string",
+        "description": "Haupttyp, bei Ressourcen immer: RES"
+      },
+      "sType": {
+        "type": "string",
+        "description": "Typ der Ressource"
+      },
+      "creationDate": {
+        "type": "number",
+        "description": "Zeitstempel der Einbindung der Ressource in den CbDD Datenbestand"
+      },
+      "modificationDate": {
+        "type": "number",
+        "description": "Zeitstempel der letzten Änderung an den Metadaten der Ressource"
+      },
+      "resProvider": {
+        "type": "string",
+        "description": "Anbieter der Ressource"
+      },
+      "resLicense": {
+        "type": "string",
+        "description": "Lizenz der Ressource"
+      },
+      "resParams": {
+        "type": "object",
+        "description": "zwischengespeicherte Daten des Anbieters der Ressource"
+      },
+      "appellation": {
+        "type": "string",
+        "description": "Titel der Ressource"
+      }
+    },
+    "required": [ "ID", "mType", "sType", "creationDate", "modificationDate", "resProvider"]
+  }
+}
