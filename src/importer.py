@@ -9,6 +9,10 @@ from torch.jit import isinstance
 from memoization import cached
 from attr import field
 
+class NameMappingException(Exception):
+    def __init__(self, name):
+        super().__init__("Values missing in name mapping: " + name)
+
 def not_inferred (func):
     def wrapper_fun (*args, **kwargs):
         return (func(*args, **kwargs), False)
@@ -26,7 +30,8 @@ class Importer:
         self.type_field = basic_info["type_field"]
         self.conn_id1 =    basic_info["conn_id1"]
         self.conn_id2 =    basic_info["conn_id2"]
-        self.conn_type_field =    basic_info["conn_type_field"]
+        self.conn_type_field = basic_info["conn_type_field"]
+        self.conn_dir_field = basic_info["conn_dir_field"]
         
         self.connection_table_mapping = {}
         
@@ -60,91 +65,100 @@ class Importer:
     def do_import (self, only = None):
         self.conn = conn_3310()
     
-        with open(self.object_file, encoding="utf8") as f, open(self.connection_file, encoding="utf8") if self.connection_file else io.StringIO("{}") as cf:
-            self.data = self.data_function(json.load(f))
+        if type(self.object_file) is not list:
+            self.object_file = [self.object_file]
+            
+        self.data = []
+        for ofile in self.object_file:
+            with open(ofile, encoding="utf8") as f:
+                self.data += self.data_function(json.load(f))
+    
+        with open(self.connection_file, encoding="utf8") if self.connection_file else io.StringIO("{}") as cf:
             self.conns = self.conn_function(json.load(cf))
             
-            self.cur = self.conn.cursor()
+        self.cur = self.conn.cursor()
 
-            sql = "SELECT `table`, `id`, `field`, `old`, `new` FROM plafond.changes WHERE source = '" + self.dbname + "'"
+        sql = "SELECT `table`, `id`, `field`, `old`, `new` FROM plafond.changes WHERE source = '" + self.dbname + "'"
+        self.cur.execute(sql)
+        for row in self.cur.fetchall():
+            if not row[0] in self.changes:
+                self.changes[row[0]] = []
+            self.changes[row[0]].append(row)
+            
+        sql = "SELECT type_in, type_out FROM plafond.changes_connections WHERE source = 'deckenmalerei'"
+        self.cur.execute(sql)
+        for row in self.cur.fetchall():
+            self.changes_conns[row[0]] = row[1]
+
+        for row in self.data:
+            self.type_mapping[row[self.id_field]] = row[self.type_field]
+            if not row[self.type_field] in self.type_count:
+                self.type_count[row[self.type_field]] = 0
+            self.type_count[row[self.type_field]] += 1
+
+        #Update/insert data
+        for object_type in self.object_table_mapping.keys():  
+            print ("Handling " + object_type + "...")
+            self.fill_id_mapping(object_type)
+            cElements = self.type_count[object_type]
+            
+            if only != None and only != object_type:
+                continue
+            
+            self.statistics[object_type] = {
+                "rows" : 0,
+                "rows_used" : 0,
+                "fields" : {}
+            }
+            
+            info = self.object_table_mapping[object_type]
+            for db_field in info["import_columns"]:
+                self.update_statistics (object_type, info["import_columns"][db_field], db_field)
+            
+            for join_table in info["lists"]:
+                fields = info["lists"][join_table][0]
+                if type(fields) != tuple:
+                    fields = (fields,)
+                
+                for field in fields:
+                    self.update_statistics (object_type, field, join_table)
+            
+            self.statistics[object_type]["fields"]["auto"] = {
+                "db_fields": [],
+                "count" : 0
+            }
+            
+            for db_field in info["auto_columns"]:
+                self.statistics[object_type]["fields"]["auto"]["db_fields"].append(db_field)
+
+            num = 0
+            
+            for row in self.data:  
+                if row[self.type_field] == object_type:
+                    if num % 100 == 0:
+                        print(str(num) + " / " + str(cElements))
+                        
+                    num += 1
+                    self.statistics[object_type]["rows"] += 1
+
+                    if self.handle_row(row):
+                        self.conn.commit()
+                        #exit()
+                                    
+        #Check for removed entries
+        for table in reversed(self.ids_handled.keys()):
+            info = self.get_info_for_table(table)
+            id_list = ",".join(map (str, self.ids_handled[table]))
+            sql = "SELECT " + info["primary_key"] + " FROM " + table + " WHERE source = '" + self.dbname + "' AND " + info["primary_key"] + " NOT IN (" + id_list + ")"
             self.cur.execute(sql)
-            for row in self.cur.fetchall():
-                if not row[0] in self.changes:
-                    self.changes[row[0]] = []
-                self.changes[row[0]].append(row)
-                
-            sql = "SELECT type_in, type_out FROM plafond.changes_connections WHERE source = 'deckenmalerei'"
-            self.cur.execute(sql)
-            for row in self.cur.fetchall():
-                self.changes_conns[row[0]] = row[1]
-    
-            for row in self.data:
-                self.type_mapping[row[self.id_field]] = row[self.type_field]
-                if not row[self.type_field] in self.type_count:
-                    self.type_count[row[self.type_field]] = 0
-                self.type_count[row[self.type_field]] += 1
-    
-            #Update/insert data
-            for object_type in self.object_table_mapping.keys():  
-                print ("Handling " + object_type + "...")
-                self.fill_id_mapping(object_type)
-                cElements = self.type_count[object_type]
-                
-                if only != None and only != object_type:
-                    continue
-                
-                self.statistics[object_type] = {
-                    "rows" : 0,
-                    "rows_used" : 0,
-                    "fields" : {}
-                }
-                
-                info = self.object_table_mapping[object_type]
-                for db_field in info["import_columns"]:
-                    self.update_statistics (object_type, info["import_columns"][db_field], db_field)
-                
-                for join_table in info["lists"]:
-                    fields = info["lists"][join_table][0]
-                    if type(fields) != tuple:
-                        fields = (fields,)
-                    
-                    for field in fields:
-                        self.update_statistics (object_type, field, join_table)
-                
-                self.statistics[object_type]["fields"]["auto"] = {
-                    "db_fields": [],
-                    "count" : 0
-                }
-                for db_field in info["auto_columns"]:
-                    self.statistics[object_type]["fields"]["auto"]["db_fields"].append(db_field)
-
-                num = 0
-                
-                for row in self.data:  
-                    if row[self.type_field] == object_type:
-                        if num % 100 == 0:
-                            print(str(num) + " / " + str(cElements))
-                            
-                        num += 1
-                        self.statistics[object_type]["rows"] += 1
-
-                        if self.handle_row(row):
-                            self.conn.commit()
-                            #exit()
-                            
-            #Check for removed entries
-            for table in self.ids_handled:
-                info = self.get_info_for_table(table)
-                id_list = ",".join(map (str, self.ids_handled[table]))
-                sql = "SELECT " + info["primary_key"] + " FROM " + table + " WHERE source = '" + self.dbname + "' AND " + info["primary_key"] + " NOT IN (" + id_list + ")"
+            
+            dids = self.cur.fetchall()
+            if (len(dids) > 0):
+                print("Deleting " + str(len(dids)) + " rows from table " + table)
+                sql = "DELETE FROM plafond.`" + table + "` WHERE " + info["primary_key"] + " IN (" + ",".join(map (lambda x: str(x[0]), dids)) + ")"
+                print(sql)
                 self.cur.execute(sql)
-                
-                dids = self.cur.fetchall()
-                if (len(dids) > 0):
-                    print("Deleting " + len(dids) + " rows from table " + table)
-                    sql = "DELETE FROM plafond.`" + table + "` WHERE " + info["primary_key"] + " IN (" + ",".join(map (lambda x: str(x[0]), dids)) + ")"
-                    self.cur.execute(sql)
-                    self.conn.commit()
+                self.conn.commit()
               
         print("Create statistics ...")
                 
@@ -212,24 +226,49 @@ class Importer:
         
         return int(s)
     
+    @not_inferred
     def to_str (self, s, dbname, table, field):
         if s == None:
             return None
         
         return str(s)
     
-    def create_iconclass (self, val):
+    def create_building_function (self, name, dbname):
+        if name == None:
+            raise NameMappingException("None") 
+        
+        sql = "INSERT IGNORE INTO building_functions (name_e) VALUES (%s)"
+        self.cur.execute(sql, name)
+        self.conn.commit()
+        
+        return self.cur.lastrowid
+    
+    def create_room_function (self, name, dbname):
+        if name == None:
+            raise NameMappingException("None") 
+        
+        sql = "INSERT IGNORE INTO room_functions (name_e) VALUES (%s)"
+        self.cur.execute(sql, name)
+        self.conn.commit()
+        
+        return self.cur.lastrowid
+                
+    
+    def create_iconclass (self, val, dbname):
         url = "https://iconclass.org/" + urllib.parse.quote(val) + ".json"
         
         try:
             f = urllib.request.urlopen(url)
             json_str = f.read()
             data = json.loads(json_str)
-            sql = "INSERT INTO plafond.iconclasses (iconclass_id, description, keyword) VALUES (%s, %s, %s)"
+            sql = "INSERT INTO plafond.iconclasses (iconclass_id, description, iconclass_id_0, iconclass_id_1, iconclass_id_2) VALUES (%s, %s, %s, %s, %s)"
             if data == None:
                 raise Exception("Non-valid json: " + str(json_str) + " for iconclass " + val)
-            kw = data["kw"]["en"][0] if "kw" in data and "en" in data["kw"] else ""
-            self.cur.execute(sql, [val, data["txt"]["en"], kw])
+
+            id_0 = data["p"][0]
+            id_1 = data["p"][1] if 1 in data["p"] else id_0
+            id_2 = data["p"][2] if 2 in data["p"] else id_1
+            self.cur.execute(sql, [val, data["txt"]["en"], id_0, id_1, id_2])
             
             return val
         except urllib.error.HTTPError as err:
@@ -240,7 +279,7 @@ class Importer:
         
         res = ""
         for key, slist in params.items():
-            if len(slist) > 0:
+            if slist != None and len(slist) > 0:
                 if res != "":
                     res += ";"
                 res += key + ":" + "+".join(slist)
@@ -262,11 +301,11 @@ class Importer:
     def combine_to_single_field (self, params, dbname, table, field):
         name_mapping = self.get_type_name_mapping(dbname, table, field)
         
-        key = "+".join([key for key, val in params.items() if val])
-        
-        if key == "":
+        if params == None:
             key = "NONE"
-        
+        else:
+            key = "+".join([key for key, val in params.items() if val])
+
         if not self.check_in_name_mapping(key, name_mapping, table, field):
             return None
 
@@ -361,8 +400,8 @@ class Importer:
                 arg = entry_id
                 object_id = fun(arg, self.dbname, table, dbfield)
                 if object_id == None:
-                    return (None, True)
-                return (self.id_mapping[self.type_mapping[object_id]][object_id], True)
+                    return (None, False)
+                return (self.id_mapping[self.type_mapping[object_id]][object_id], False)
             elif type(field_info[0]) == tuple:
                 args = {x: (self.base_value_or_changed(table, row, x, info) if x in row else None) for x in field_info[0]}
                 #TODO strip?
@@ -454,8 +493,20 @@ class Importer:
         
         return ret
     
-    def get_connections (self, eid):
-        return [e for e in self.conns if e[self.conn_id1] == eid]
+    def get_connections (self, eid, direction = None):
+        res = []
+        for conn in self.conns:
+            if conn[self.conn_id1] == eid and (direction == None or direction == conn[self.conn_dir_field]):
+                res.append(conn)
+            elif conn[self.conn_id2] == eid and (direction == None or direction != conn[self.conn_dir_field]):
+                revConn = {}
+                revConn[self.conn_id1] = conn[self.conn_id2]
+                revConn[self.conn_id2] = conn[self.conn_id1]
+                revConn[self.conn_type_field] = conn[self.conn_type_field]
+                revConn[self.conn_dir_field] = not conn[self.conn_dir_field]
+                res.append(revConn)
+        return res
+
     
     def id_handled (self, table, idx):
         if table not in self.ids_handled:
@@ -503,7 +554,7 @@ class Importer:
         changed = False
         
         for join_table in info["lists"]:
-            (names_export, key_ref_table, ref_table, where_part, new_element_fun) = info['lists'][join_table]
+            (names_export, key_ref_table, ref_table, (where_field, use_name_mapping), new_element_fun) = info['lists'][join_table]
             
             if type(names_export) != tuple:
                 names_export = (names_export,)
@@ -517,17 +568,28 @@ class Importer:
                 list_data = self.get_list_data(info, row, name_export)
                 invalid_elements = []
                 for li in list_data:
-                    sql = "SELECT " + key_ref_table + " FROM plafond.`" + ref_table + "` WHERE " + where_part
-                    self.cur.execute(sql, (li))
-                    sub_res = self.cur.fetchone()
+                    if use_name_mapping:
+                        (name, _) = self.find_mapped_name(li, self.dbname, ref_table, where_field)
+                    else:
+                        name = li
+                        
+                    if name == None:
+                        sub_res = None
+                    else:
+                        sql = "SELECT " + key_ref_table + " FROM plafond.`" + ref_table + "` WHERE " + where_field + " = %s"
+                        self.cur.execute(sql, (name))
+                        sub_res = self.cur.fetchone()
                     
                     if sub_res == None:
                         if new_element_fun:
                             try:
-                                id_created = getattr(self, new_element_fun)(li)
+                                id_created = getattr(self, new_element_fun)(name, self.dbname)
                                 new_ids.append(id_created)
                             except Exception as e:
-                                invalid_elements.append(li)
+
+                                if not isinstance(e, NameMappingException):
+                                    print(e)
+                                    invalid_elements.append(li)
                                 #print("\nNew entry could not be created in table '" + ref_table + "' for value '" + li + "' for row\n" + str(row) + ":\n" + str(e) + "\n")
                                 
                         else:
@@ -562,6 +624,7 @@ class Importer:
                     sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ") VALUES (%s, %s)"
                     self.cur.execute(sql, (old_data[0], nid))
                     changed = True
+                    existing_ids.append(nid)
                     
         return changed
     
@@ -576,6 +639,7 @@ class Importer:
             existing_conns = self.cur.fetchall()
             
             new_conns = []
+            
             for (export_id, db_type_val) in self.find_connections_with_types(entry_id, element_types, self.dbname, join_table, type_field):
                 sql = "SELECT " + key_ref_table + " FROM plafond.`" + ref_table + "` WHERE source_id = %s" 
                 self.cur.execute(sql, (export_id))
@@ -619,13 +683,29 @@ class Importer:
         #TODO lists, connections
     
         sql = "INSERT INTO " + info["name"] + " (source_id," + ",".join(map(lambda x: "`" + x + "`", columns)) + ") VALUES(%s" + (",%s" * len(columns)) + ")"
-        fields = [eid] + used_fields + list(info["auto_columns"].values())
+        fields = [eid] + used_fields + self.get_auto_values(info, columns, used_fields)
         print(fields)
         
         self.cur.execute(sql, fields)
         new_id = self.cur.lastrowid
         self.id_mapping[row[self.type_field]][eid] = new_id
         self.id_handled(info["name"], new_id)
+        
+    def get_auto_values (self, info, columns, values):
+        res = []
+        
+        for val in info["auto_columns"].values():
+            if val[0] == "CONST":
+                res.append(val[1])
+            elif val[0] == "FUNC":
+                fun = getattr(self, val[1])
+                data = dict(zip(columns, values))
+                res.append(fun(data))
+            else:
+                raise Exception("Invalid auto column type: " + val[0])
+        
+        return res
+        
         
     def update_statistics (self, otype, key_import, db_field):
         if type(key_import) == list:
@@ -675,4 +755,24 @@ class Importer:
             return (matchObject[2], matchObject[1])
         
         return (None,None)
+    
+    def get_id_person_unique (self, data):
+        
+        res = None
+        if data["wikidata_id"]:
+            sql = "SELECT id_person_unique FROM a_persons_unique WHERE wikidata_id = %s"
+            self.cur.execute(sql, data["wikidata_id"])
+            
+            res = self.cur.fetchone()
+        
+        if res == None:
+            sql = "SELECT id_person_unique FROM a_persons_unique WHERE full_name = %s"
+            self.cur.execute(sql, data["full_name"])
+            
+        if res == None:
+            sql = "INSERT INTO a_persons_unique (full_name, first_name, last_name, wikidata_id) VALUES (%s, %s, %s, %s)"
+            self.cur.execute(sql, (data["full_name"], data["first_name"], data["last_name"], data["wikidata_id"]))
+            return self.cur.lastrowid
+        else:
+            return res[0]
 

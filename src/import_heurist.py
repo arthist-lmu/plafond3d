@@ -6,7 +6,7 @@ from memoization import cached
 class Heurist_Importer (Importer):
     def __init__ (self):
 
-        object_file = "../dumps/heurist/Export_PLAFOND_3D_20230710142819.json"
+        object_file = "../dumps/heurist/Export_PLAFOND_3D_20240220113727.json"
         connection_file = None
         
         self.temp_conns = []
@@ -18,12 +18,17 @@ class Heurist_Importer (Importer):
             "conn_id1" : "id1",
             "conn_id2" : "id2",
             "conn_type_field" : "type",
+            "conn_dir_field" : "dir"
         }
         
         self.person_data = {
             "Pièce" : [
                 {"fields" : {"full_name": "Architecte / Architekt", "qid": "ID wikidata Architecte / Architekt"}, "connection": "Architecte / Architekt"},
                 {"fields" : {"full_name": "Artiste(s) - Auteur(s) décor mural / Autor der Wanddekoration", "qid": "ID wikidata Artiste(s)/Auteur(s) décor mural / Autor der Wanddekoration"}, "connection": "Artiste"}
+            ],
+            "Plafond" : [
+                 {"fields" : {"full_name": "Auteur(s) principal / Autor", "qid": "ID wikidata auteur(s) principal / ID wikidata Autor"}, "connection": "Auteur"},
+                {"fields" : {"full_name": "Auteur(s) secondaires / Mitarbeiter", "qid": "ID wikidata auteur(s) secondaire(s) / ID wikidata Mitarbeiter"}, "connection": "Auteur"}
             ]
         }
             
@@ -40,7 +45,8 @@ class Heurist_Importer (Importer):
                 "lists" : {},
                 "connections" : {},
                 "auto_columns" : {
-                    "source": "heurist"
+                    "source": ("CONST", "heurist"),
+                    "id_person_unique" : ("FUNC", "get_id_person_unique")
                 }
             },
             "Edifice / Bauwerk" : {
@@ -62,11 +68,11 @@ class Heurist_Importer (Importer):
                     "dating_end_approx": ["Date supérieure / Spätestes Datum", "handle_approx"]
                 },
                 "lists" : {
-                    "building_function_join": ["Fonction / Funktion", "id_building_function", "building_functions", "name_heurist = %s", None]
+                    "building_function_join": ["Fonction / Funktion", "id_building_function", "building_functions", ("name_e", True), "create_building_function"]
                 },
                 "connections" : {},
                 "auto_columns" : {
-                    "source": "heurist"
+                    "source": ("CONST", "heurist")
                 }
             },
             "Pièce" : {
@@ -88,13 +94,13 @@ class Heurist_Importer (Importer):
                     "url_photo" : ["URL photo", "first_in_list"],
                 },
                 "lists" : {
-                    "room_function_join": ["Fonction au moment du décor", "id_room_function", "room_functions", "name_heurist = %s", None]
+                    "room_function_join": ["Fonction au moment du décor", "id_room_function", "room_functions", ("name_e", True), "create_room_function"]
                 },
                 "connections" : {
                     "room_person_join" : [["Personne"], "connection_type", "id_person", "persons"]
                 },
                 "auto_columns" : {
-                    "source": "heurist"
+                    "source": ("CONST", "heurist")
                 }
             },
             "Plafond" : {
@@ -114,11 +120,13 @@ class Heurist_Importer (Importer):
                 },
                 "lists" : {
                     "plafond_iconclass_join": 
-                        [("Centre Iconclass / Iconlass der Deckenmitte", "Côté Iconclass / Iconclass der Seitenbereiche", "Iconclass sujet général / Iconclass, Allgemeines Sujet"), "iconclass_id", "iconclasses", "iconclass_id = %s", "create_iconclass"],
+                        [("Centre Iconclass / Iconlass der Deckenmitte", "Côté Iconclass / Iconclass der Seitenbereiche", "Iconclass sujet général / Iconclass, Allgemeines Sujet"), "iconclass_id", "iconclasses", ("iconclass_id", False), "create_iconclass"],
                 },
-                "connections" : {},
+                "connections" : {
+                    "plafond_person_join" : [["Personne"], "connection_type", "id_person", "persons"]
+                },
                 "auto_columns" : {
-                    "source": "heurist"
+                    "source": ("CONST", "heurist")
                 }
             },
         }
@@ -257,7 +265,8 @@ class Heurist_Importer (Importer):
                     self.temp_conns.append({
                         "id1" : obj[self.id_field],
                         "id2" : id_str,
-                        "type" : row["connection"]
+                        "type" : row["connection"],
+                        "dir" : True
                     })
                     
                 for ofield in row["fields"]:
