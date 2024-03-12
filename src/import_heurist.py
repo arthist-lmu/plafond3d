@@ -28,7 +28,8 @@ class Heurist_Importer (Importer):
             ],
             "Plafond" : [
                  {"fields" : {"full_name": "Auteur(s) principal / Autor", "qid": "ID wikidata auteur(s) principal / ID wikidata Autor"}, "connection": "Auteur"},
-                {"fields" : {"full_name": "Auteur(s) secondaires / Mitarbeiter", "qid": "ID wikidata auteur(s) secondaire(s) / ID wikidata Mitarbeiter"}, "connection": "Auteur"}
+                {"fields" : {"full_name": "Auteur(s) secondaires / Mitarbeiter", "qid": "ID wikidata auteur(s) secondaire(s) / ID wikidata Mitarbeiter"}, "connection": "Auteur"},
+                {"fields" : {"full_name": "Commanditaire(s) / Auftrageber*in", "qid" : "ID wikidata commanditaire(s) / ID wikidata Auftrageber*in"}, "connection": "Commanditaire"}
             ]
         }
             
@@ -40,7 +41,8 @@ class Heurist_Importer (Importer):
                     "full_name": ["full_name", "handle_full_name"],
                     "first_name" : ["full_name", "get_first_name"],
                     "last_name" : ["full_name", "get_last_name"],
-                    "wikidata_id" : ["qid", "handle_qid"]
+                    "wikidata_id" : ["qid", "handle_qid"],
+                    "gender" : ["qid", "get_gender"]
                 },
                 "lists" : {},
                 "connections" : {},
@@ -184,6 +186,23 @@ class Heurist_Importer (Importer):
             return int(s)
         except:
             return None
+        
+    def get_gender (self, val, dbname, table, field):
+        (qid, _) = self.handle_qid (val, dbname, table, field)
+        
+        if qid == None:
+            return ""
+        
+        query = "SELECT ?genderLabel WHERE { ?item wdt:P21 ?gender. FILTER (?item = wd:" + qid + "). SERVICE wikibase:label {bd:serviceParam wikibase:language 'en'.}}"
+        json_result = self.sparql_wikidata(query)
+        
+        if json_result == None:
+            return ""
+        
+        if len(json_result["results"]["bindings"]) == 1:
+            return json_result["results"]["bindings"][0]["genderLabel"]["value"][0]
+        
+        return None
     
     @not_inferred
     def handle_approx (self, s, dbname, table, field):

@@ -23,7 +23,7 @@ def conn_3310 (db = "plafond", **user_data):
     #host = "gwi-sql.gwi.uni-muenchen.de"
     #port = 3309
     
-    host = "localhost"
-    port = 3311
+    host = "gwi-sql.gwi.uni-muenchen.de"
+    port = 3310
     
     return pymysql.connect(host= host, port=port, db=db, user=ldata[0], passwd=ldata[1], charset='utf8', ssl={"stub": 0})

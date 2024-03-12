@@ -208,7 +208,7 @@ class Importer:
             
         self.statistics[otype]["rows_used"] += 1
         
-        fields = [info["primary_key"]] + list(info["import_columns"].keys())
+        fields = [info["primary_key"]] + list(info["import_columns"].keys()) + list(info["auto_columns"].keys())
         sql = "SELECT " + ",".join(map(lambda x: "`" + x + "`", fields)) + " FROM plafond.`" + info["name"] + "` WHERE source='" + self.dbname + "' AND source_id = %s"
         self.cur.execute(sql, self.cid)
         old_data = self.cur.fetchone()
@@ -522,6 +522,8 @@ class Importer:
     
         updates = []
         values = []
+        all_values = []
+        
         for i, db_field in enumerate(info["import_columns"]):
             
             key_import = info["import_columns"][db_field]
@@ -533,9 +535,23 @@ class Importer:
                 print(new_val)
                 updates.append("`" + db_field + "` = %s")
                 values.append(new_val)
+                all_values.append(new_val)
             elif new_val and old_val and new_val != old_val:
                 raise Exception("Different value in database for inferred value: " + info["name"] + " " + str(old_data[0]) 
                                 + " field '" + db_field + "': Old value = '" + str(old_val) + "', new value = '" + str(new_val) + "'")
+            else:
+                all_values.append(old_val)
+                
+        columns = list(info["import_columns"].keys()) + list(info["auto_columns"].keys())
+        avals = self.get_auto_values(info, columns, all_values)
+        for i, aval_key in enumerate(info["auto_columns"].keys()):
+            new_aval = avals[i]
+            old_aval = old_data[len(info["import_columns"]) + 1 + i]
+            
+            if new_aval != old_aval:
+                updates.append("`" + aval_key + "` = %s")
+                values.append(new_aval)
+            all_values.append(new_aval)
 
         changed = False    
         if len(updates) > 0:
@@ -758,6 +774,7 @@ class Importer:
     
     def get_id_person_unique (self, data):
         
+        qidFound = False
         res = None
         if data["wikidata_id"]:
             sql = "SELECT id_person_unique FROM a_persons_unique WHERE wikidata_id = %s"
@@ -769,10 +786,19 @@ class Importer:
             sql = "SELECT id_person_unique FROM a_persons_unique WHERE full_name = %s"
             self.cur.execute(sql, data["full_name"])
             
+            res = self.cur.fetchone()
+        else:
+            qidFound = True
+            
         if res == None:
             sql = "INSERT INTO a_persons_unique (full_name, first_name, last_name, wikidata_id) VALUES (%s, %s, %s, %s)"
             self.cur.execute(sql, (data["full_name"], data["first_name"], data["last_name"], data["wikidata_id"]))
+            self.conn.commit()
             return self.cur.lastrowid
         else:
+            if not qidFound:
+                sql = "UPDATE a_persons_unique SET wikidata_id = %s WHERE id_person_unique = %s"
+                self.cur.execute(sql, (data["wikidata_id"], res[0]))
+            self.conn.commit()
             return res[0]
 

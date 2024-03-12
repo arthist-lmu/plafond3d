@@ -29,7 +29,8 @@ class DM_Importer (Importer):
                     "full_name" : "appellation",
                     "first_name" : ["appellation", "get_first_name"],
                     "last_name" : ["appellation", "get_last_name"],
-                    "wikidata_id": ["normdata", "find_qid_from_normdata"]
+                    "wikidata_id": ["normdata", "find_qid_from_normdata"],
+                    "gender" : ["gender", "get_gender"]
                 },
                 "lists" : {},
                 "connections" : {},
@@ -154,6 +155,14 @@ class DM_Importer (Importer):
     
     def get_year_approx (self, dating, dbname, table, field):
         return self.handle_year(dating, dbname, table, field)[2]
+
+    def get_gender (self, gender, dbname, table, field):
+        if gender == "MALE":
+            return "m"
+        elif gender == "FEMALE":
+            return "f"
+        
+        return ""
 
     @cached
     def handle_year (self, dating, dbname, table, field):
