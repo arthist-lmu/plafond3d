@@ -7,7 +7,6 @@ import urllib.parse
 import urllib.request
 from torch.jit import isinstance
 from memoization import cached
-from attr import field
 
 class NameMappingException(Exception):
     def __init__(self, name):

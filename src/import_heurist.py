@@ -84,8 +84,8 @@ class Heurist_Importer (Importer):
                     "title" : "Dénomination actuelle / Aktuelle Bezeichnung",
                     "id_building": ["Édifice / Teil von Bauwerk", "handle_fk"],
                     "length": ["Longueur / Länge", "none_to_empty"],
-                    "width": ["Largeur / Breite", "none_to_empty"],
-                    "height": ["Hauteur / Höhe", "none_to_empty"],
+                    "width": ["Largeur / Breite", "parse_dim"],
+                    "height": ["Hauteur / Höhe", "parse_dim"],
                     "floor": ["Niveau / Stockwerk", "append_elements"],
                     "condition" : ["Etat de conservation pièce / Erhaltungszustand Raum", "find_mapped_name"],
                     "dating_original" : [("Date inférieure pièce / frühestes Datum Raum", "Date supérieure pièce / spätestes Datum"), "handle_unformated_date"],
@@ -139,6 +139,13 @@ class Heurist_Importer (Importer):
         }
         
         super().__init__(object_file, connection_file, basic_info, object_table_mapping)
+       
+    @not_inferred
+    def parse_dim (self, s, dbname, table, field):
+        if s == None:
+            return ""
+        
+        return str(s).replace(",", ".")
        
     @not_inferred 
     def correct_lat_lng (self, params, dbname, table, field):
