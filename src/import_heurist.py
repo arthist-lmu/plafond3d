@@ -83,7 +83,7 @@ class Heurist_Importer (Importer):
                 "import_columns": {
                     "title" : "Dénomination actuelle / Aktuelle Bezeichnung",
                     "id_building": ["Édifice / Teil von Bauwerk", "handle_fk"],
-                    "length": ["Longueur / Länge", "none_to_empty"],
+                    "length": ["Longueur / Länge", "parse_dim"],
                     "width": ["Largeur / Breite", "parse_dim"],
                     "height": ["Hauteur / Höhe", "parse_dim"],
                     "floor": ["Niveau / Stockwerk", "append_elements"],
@@ -145,7 +145,13 @@ class Heurist_Importer (Importer):
         if s == None:
             return ""
         
-        return str(s).replace(",", ".")
+        s = str(s).replace(",", ".")
+        
+        posBracket = s.find(" (")
+        if posBracket != -1:
+            s = s[0:posBracket]
+            
+        return s
        
     @not_inferred 
     def correct_lat_lng (self, params, dbname, table, field):
@@ -348,5 +354,5 @@ class Heurist_Importer (Importer):
     
 if __name__ == "__main__":
     importer = Heurist_Importer()
-    importer.do_import() #only = "Plafond"
+    importer.do_import(only = "Pièce") #only = "Plafond"
         
