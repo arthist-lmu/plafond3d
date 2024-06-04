@@ -103,7 +103,7 @@ class DM_Importer (Importer):
                 "import_columns": {
                     "title" : "appellation",
                     "id_room": ["FK", "find_room_for_plafond"],
-                    "dating_original": ["verbaleDating", "none_to_empty"],
+                    "dating_original": "verbaleDating",
                     "dating_start": ["verbaleDating", "get_start_year"],
                     "dating_start_approx" : ["verbaleDating", "get_year_approx"],
                     "dating_end": ["verbaleDating", "get_end_year"],
@@ -121,8 +121,7 @@ class DM_Importer (Importer):
                 },
                 "auto_columns" : {
                     "source": ("CONST", "deckenmalerei")
-                },
-                "condition" : "is_plafond"
+                }
             }
         }
         
@@ -209,7 +208,6 @@ class DM_Importer (Importer):
         return (None, None, False)
 
     def find_qid_from_normdata (self, normdata, dbname, table, field):
-
         if normdata == None or not "gnd" in normdata:
             return None
         

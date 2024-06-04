@@ -2,6 +2,7 @@ from src.importer import Importer, not_inferred
 import re
 from overrides import override
 from memoization import cached
+from Tools.scripts import startuptime
 
 class Heurist_Importer (Importer):
     def __init__ (self):
@@ -177,15 +178,14 @@ class Heurist_Importer (Importer):
         start = params[keys[0]]
         end = params[keys[1]]
         
-        if (not start or re.match("[0-9]{4}\*?", start)) and (not end or re.match("[0-9]{4}\*?", end)):
-            return ""
-        
         if (start and not end) or start == end:
             return start
         elif end and not start:
             return end
+        elif start and end:
+            return start + " - " + end
         
-        return start + " - " + end
+        return None
         
     @not_inferred
     def handle_date (self, s, dbname, table, field):
@@ -354,5 +354,5 @@ class Heurist_Importer (Importer):
     
 if __name__ == "__main__":
     importer = Heurist_Importer()
-    importer.do_import(only = "Pièce") #only = "Plafond"
+    importer.do_import() #only = "Plafond"
         
