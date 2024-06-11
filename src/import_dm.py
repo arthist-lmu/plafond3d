@@ -103,11 +103,11 @@ class DM_Importer (Importer):
                 "import_columns": {
                     "title" : "appellation",
                     "id_room": ["FK", "find_room_for_plafond"],
-                    "dating_original": "verbaleDating",
-                    "dating_start": ["verbaleDating", "get_start_year"],
-                    "dating_start_approx" : ["verbaleDating", "get_year_approx"],
-                    "dating_end": ["verbaleDating", "get_end_year"],
-                    "dating_end_approx" : ["verbaleDating", "get_year_approx"],
+                    "dating_original": ["verbaleDating", "get_painting_dating"],
+                    "dating_start": ["verbaleDating", "get_start_year_painting"],
+                    "dating_start_approx" : ["verbaleDating", "get_year_approx_painting"],
+                    "dating_end": ["verbaleDating", "get_end_year_painting"],
+                    "dating_end_approx" : ["verbaleDating", "get_year_approx_painting"],
                     "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields"],
                     "condition" : ["condition", "combine_to_single_field"],
                     #"url_photo" : "leadImg",
@@ -125,9 +125,13 @@ class DM_Importer (Importer):
             }
         }
         
+        self.id_index_map = {}
+        
         super().__init__(object_file, connection_file, basic_info, object_table_mapping)
         
     def data_function (self, data):
+        for row in data:
+            self.id_index_map[row["ID"]] = row
         return data
     
     def conn_function (self, conns):
@@ -145,6 +149,38 @@ class DM_Importer (Importer):
             return field[key]
         
         return ""
+
+    @cached
+    def infer_painting_dating (self, eid, datingDirect):
+        if datingDirect:
+            return datingDirect
+        
+        pcycle_info = self.find_connections_with_types(eid, ["OBJECT_PICTURE_CYCLE"], self.dbname, "plafonds", "cycle")
+       
+        if len(pcycle_info) == 0:
+            return None
+         
+        pcycle_data = self.id_index_map[pcycle_info[0][0]]
+        if "verbaleDating" in pcycle_data:
+            return pcycle_data["verbaleDating"]
+        
+        return None
+
+    @not_inferred
+    def get_painting_dating (self, dating, dbname, table, field):
+        return self.infer_painting_dating(self.cid, dating)
+
+    def get_start_year_painting (self, dating, dbname, table, field):
+        dating = self.infer_painting_dating (self.cid, dating)
+        return self.handle_year(dating, dbname, table, field)[0]
+    
+    def get_end_year_painting (self, dating, dbname, table, field):
+        dating = self.infer_painting_dating (self.cid, dating)
+        return self.handle_year(dating, dbname, table, field)[1]
+    
+    def get_year_approx_painting (self, dating, dbname, table, field):
+        dating = self.infer_painting_dating (self.cid, dating)
+        return self.handle_year(dating, dbname, table, field)[2]
 
     def get_start_year (self, dating, dbname, table, field):
         return self.handle_year(dating, dbname, table, field)[0]
@@ -165,6 +201,7 @@ class DM_Importer (Importer):
 
     @cached
     def handle_year (self, dating, dbname, table, field):
+        
         if dating == None:
             return (None, None, False)
         
