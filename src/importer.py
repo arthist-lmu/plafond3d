@@ -5,8 +5,8 @@ import re
 from src.db_connection import conn_3310
 import urllib.parse
 import urllib.request
-from torch.jit import isinstance
 from memoization import cached
+import requests
 
 class NameMappingException(Exception):
     def __init__(self, name):
@@ -143,6 +143,10 @@ class Importer:
                     if self.handle_row(row):
                         self.conn.commit()
                         #exit()
+                                 
+        if only:
+            print("Finished!")
+            return
                                     
         #Check for removed entries
         for table in reversed(self.ids_handled.keys()):
@@ -184,6 +188,17 @@ class Importer:
         self.conn.commit()
         
         print("Finished!")
+        
+    def check_url (self, url):
+        try:
+            get = requests.head(url, allow_redirects=True)
+            
+            if get.status_code != 404:
+                return True
+            
+            return False
+        except Exception:
+            return False
                             
     def handle_row (self, row):
         info = self.object_table_mapping[row[self.type_field]]
@@ -260,14 +275,19 @@ class Importer:
             f = urllib.request.urlopen(url)
             json_str = f.read()
             data = json.loads(json_str)
-            sql = "INSERT INTO plafond.iconclasses (iconclass_id, description, iconclass_id_0, iconclass_id_1, iconclass_id_2) VALUES (%s, %s, %s, %s, %s)"
+            sql = "INSERT INTO plafond.iconclasses (iconclass_id, description, iconclass_id_0, iconclass_id_1, iconclass_id_2, description_de, description_fr) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             if data == None:
                 raise Exception("Non-valid json: " + str(json_str) + " for iconclass " + val)
 
             id_0 = data["p"][0]
             id_1 = data["p"][1] if 1 in data["p"] else id_0
             id_2 = data["p"][2] if 2 in data["p"] else id_1
-            self.cur.execute(sql, [val, data["txt"]["en"], id_0, id_1, id_2])
+            
+            descr_en = data["txt"]["en"]
+            descr_de = data["txt"]["de"] if "de" in data["txt"] else ""
+            descr_fr = data["txt"]["fr"] if "fr" in data["txt"] else ""
+            
+            self.cur.execute(sql, [val, descr_en, id_0, id_1, id_2, descr_de, descr_fr])
             
             return val
         except urllib.error.HTTPError as err:
@@ -341,6 +361,7 @@ class Importer:
         return ",".join(s)
     
     def sparql_wikidata (self, query):
+        return None #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         url = self.wikidata_api_prefix + urllib.parse.quote(query) + "&format=json"
         
         try:
@@ -488,7 +509,7 @@ class Importer:
                 if not self.check_in_name_mapping(conn_name, tname_mapping, table, field) or tname_mapping[conn_name] == "NONE":
                     continue
 
-                ret.append((conn[self.conn_id2], tname_mapping[conn_name]))
+                ret.append((conn[self.conn_id2], tname_mapping[conn_name], conn_type_orig))
         
         return ret
     
@@ -569,7 +590,7 @@ class Importer:
         changed = False
         
         for join_table in info["lists"]:
-            (names_export, key_ref_table, ref_table, (where_field, use_name_mapping), new_element_fun) = info['lists'][join_table]
+            (names_export, key_ref_table, ref_table, (where_field, use_name_mapping), new_element_fun, col_orig) = info['lists'][join_table]
             
             if type(names_export) != tuple:
                 names_export = (names_export,)
@@ -579,6 +600,7 @@ class Importer:
             existing_ids = list(map(lambda x: x[0], self.cur.fetchall()))
             
             new_ids = []
+            id_name_map = {}
             for name_export in names_export:
                 list_data = self.get_list_data(info, row, name_export)
                 invalid_elements = []
@@ -600,6 +622,7 @@ class Importer:
                             try:
                                 id_created = getattr(self, new_element_fun)(name, self.dbname)
                                 new_ids.append(id_created)
+                                id_name_map[id_created] = li
                             except Exception as e:
 
                                 if not isinstance(e, NameMappingException):
@@ -611,6 +634,7 @@ class Importer:
                             raise Exception("Field '" + name_export + "' with value '" + li + "' not found.")
                     else:
                         new_ids.append(sub_res[0])
+                        id_name_map[sub_res[0]] = li
                         
                 if len(invalid_elements) > 0:
                     try:
@@ -636,8 +660,12 @@ class Importer:
             for nid in new_ids:
                 if nid not in existing_ids:
                     print("Add list connection: " + str((old_data[0], nid)))
-                    sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ") VALUES (%s, %s)"
-                    self.cur.execute(sql, (old_data[0], nid))
+                    if col_orig:
+                        sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ", " + col_orig + ") VALUES (%s, %s, %s)"
+                        self.cur.execute(sql, (old_data[0], nid, id_name_map[nid]))
+                    else:
+                        sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ") VALUES (%s, %s)"
+                        self.cur.execute(sql, (old_data[0], nid))
                     changed = True
                     existing_ids.append(nid)
                     
@@ -647,15 +675,16 @@ class Importer:
         changed = False
         
         for join_table in info["connections"]:
-            (element_types, type_field, key_ref_table, ref_table) = info["connections"][join_table]
+            (element_types, type_field, key_ref_table, ref_table, orig_col) = info["connections"][join_table]
     
             sql = "SELECT " + key_ref_table + ", " + type_field + " FROM plafond.`" + join_table + "` WHERE " + info["primary_key"] + " = " + str(old_data[0])
             self.cur.execute(sql)
-            existing_conns = self.cur.fetchall()
+            existing_conns = list(self.cur.fetchall())
             
             new_conns = []
+            new_conns_origs = {}
             
-            for (export_id, db_type_val) in self.find_connections_with_types(entry_id, element_types, self.dbname, join_table, type_field):
+            for (export_id, db_type_val, conn_type_orig) in self.find_connections_with_types(entry_id, element_types, self.dbname, join_table, type_field):
                 sql = "SELECT " + key_ref_table + " FROM plafond.`" + ref_table + "` WHERE source_id = %s" 
                 self.cur.execute(sql, (export_id))
                 sub_res = self.cur.fetchone()
@@ -664,12 +693,17 @@ class Importer:
                     raise Exception("Field '" + type_field + "' with value '" + export_id + "' not found.")
                 
                 new_conns.append((sub_res[0], db_type_val))
+                if orig_col:
+                    if not (sub_res[0], db_type_val) in new_conns_origs:
+                        new_conns_origs[(sub_res[0], db_type_val)] = []
+                    if not conn_type_orig in new_conns_origs[(sub_res[0], db_type_val)]:
+                        new_conns_origs[(sub_res[0], db_type_val)].append(conn_type_orig)
                 
             new_conns = list(set(new_conns)) #only unique rows if multiple types are mapped to the same value
             
             for (eid, etype) in existing_conns:
                 if (eid, etype) not in new_conns:
-                    print("Remove connection: " + str(eid))
+                    print("Remove connection from " + join_table + ": " + str(old_data[0]) + " - " + str(eid))
                     sql = "DELETE FROM plafond.`" + join_table + "` WHERE " + info["primary_key"] + " = %s AND " + key_ref_table + " = %s"
                     self.cur.execute(sql, (old_data[0], eid))
                     changed = True
@@ -677,8 +711,13 @@ class Importer:
             for (nid, ntype) in new_conns:
                 if (nid, ntype) not in existing_conns:
                     print("Add connection: " + str((old_data[0], nid, ntype)))
-                    sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ", " + type_field + ") VALUES (%s, %s, %s)"
-                    self.cur.execute(sql, (old_data[0], nid, ntype))
+                    if orig_col:
+                        sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ", " + type_field + ", " + orig_col + ") VALUES (%s, %s, %s, %s)"
+                        self.cur.execute(sql, (old_data[0], nid, ntype, "+".join(new_conns_origs[(nid, ntype)])))
+                    else:
+                        sql = "INSERT INTO plafond.`" + join_table + "` (" + info["primary_key"] + ", " + key_ref_table + ", " + type_field + ") VALUES (%s, %s, %s)"
+                        self.cur.execute(sql, (old_data[0], nid, ntype))
+                    existing_conns.append((nid, ntype))
                     changed = True
                     
         return changed
@@ -754,9 +793,11 @@ class Importer:
             if self.object_table_mapping[ename]["name"] == table:
                 return self.object_table_mapping[ename]
         
+    @not_inferred
     def get_first_name (self, full_name, dbname, table, field):
         return self.handle_name(full_name, dbname, table, field)[0]
 
+    @not_inferred
     def get_last_name (self, full_name, dbname, table, field):
         return self.handle_name(full_name, dbname, table, field)[1]
 

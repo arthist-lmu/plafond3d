@@ -1,12 +1,28 @@
 from src.importer import Importer, not_inferred
 from memoization import cached
 import re
-from src.db_connection import conn_3310
-from copy import copy
+import urllib.request
+import urllib.parse
+import urllib3
+import json
+import datetime
 
 class DM_Importer (Importer):
 
     def __init__ (self):
+
+        self.fmd_map = {}
+        self.img_info = {
+            "cc" : [],
+            "no_cc" : [],
+            "no_small" : [],
+            "missing_fm" : [],
+            "missing_zi" : [],
+            "missing_other" : [],
+            "missing_mixed" : [],
+            "no_connection" : []
+        }
+        self.easydb_api_prefix = "https://deckenmalerei-bilder.badw.de/api/v1/"
 
         object_file = ["../dumps/deckenmalerei.eu/2023_11/entities.json", "../dumps/deckenmalerei.eu/2023_11/resources.json"]
         connection_file = "../dumps/deckenmalerei.eu/2023_11/relations.json"
@@ -30,7 +46,8 @@ class DM_Importer (Importer):
                     "first_name" : ["appellation", "get_first_name"],
                     "last_name" : ["appellation", "get_last_name"],
                     "wikidata_id": ["normdata", "find_qid_from_normdata"],
-                    "gender" : ["gender", "get_gender"]
+                    "gender" : ["gender", "get_gender"],
+                    "gnd": ["normdata", "get_gnd_from_normdata"]
                 },
                 "lists" : {},
                 "connections" : {},
@@ -60,10 +77,10 @@ class DM_Importer (Importer):
                     #"url_photo" : "leadImg"
                 },
                 "lists" : {
-                    "building_function_join": ["functions", "id_building_function", "building_functions", ("name_e", True), "create_building_function"]
+                    "building_function_join": ["functions", "id_building_function", "building_functions", ("name_e", True), "create_building_function", "original_name"]
                 },
                 "connections" : {
-                    "building_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons"]
+                    "building_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons", "original_name"]
                 },
                 "auto_columns" : {
                     "source": ("CONST", "deckenmalerei")
@@ -87,10 +104,10 @@ class DM_Importer (Importer):
                     #"url_photo" : "leadImg"
                 },
                 "lists" : {
-                    "room_function_join": ["functions", "id_room_function", "room_functions", ("name_e", True), "create_room_function"]
+                    "room_function_join": ["functions", "id_room_function", "room_functions", ("name_e", True), "create_room_function", "original_name"]
                 },
                 "connections" : {
-                    "room_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons"]
+                    "room_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons", "original_name"]
                 },
                 "auto_columns" : {
                     "source": ("CONST", "deckenmalerei"),
@@ -108,16 +125,18 @@ class DM_Importer (Importer):
                     "dating_start_approx" : ["verbaleDating", "get_year_approx_painting"],
                     "dating_end": ["verbaleDating", "get_end_year_painting"],
                     "dating_end_approx" : ["verbaleDating", "get_year_approx_painting"],
+                    "dating_source" : ["verbaleDating", "get_dating_source"],
                     "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields"],
                     "condition" : ["condition", "combine_to_single_field"],
-                    #"url_photo" : "leadImg",
+                    "url_photo" : ["ID", "get_img_url"],
+                    "cc_licence" : ["ID", "get_licence"],
                     "signature" : "signature"
                 },
                 "lists" : {
-                    "plafond_iconclass_join": ["iconography", "iconclass_id", "iconclasses", ("iconclass_id", False), "create_iconclass"]
+                    "plafond_iconclass_join": ["iconography", "iconclass_id", "iconclasses", ("iconclass_id", False), "create_iconclass", False]
                 },
                 "connections" : {
-                    "plafond_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons"]
+                    "plafond_person_join" : [["ACTOR_PERSON"], "connection_type", "id_person", "persons", "original_name"]
                 },
                 "auto_columns" : {
                     "source": ("CONST", "deckenmalerei")
@@ -153,34 +172,129 @@ class DM_Importer (Importer):
     @cached
     def infer_painting_dating (self, eid, datingDirect):
         if datingDirect:
-            return datingDirect
+            return (datingDirect, "plafond")
         
         pcycle_info = self.find_connections_with_types(eid, ["OBJECT_PICTURE_CYCLE"], self.dbname, "plafonds", "cycle")
        
         if len(pcycle_info) == 0:
-            return None
+            id_room = self.find_transitive_connection(eid, "OBJECT_ROOM", "PART", ["OBJECT_PICTURE_CYCLE"], False)
+            if id_room and id_room in self.id_index_map and "verbaleDating" in self.id_index_map[id_room]:
+                return (self.id_index_map[id_room]["verbaleDating"], "room")
+            return (None, None)
          
         pcycle_data = self.id_index_map[pcycle_info[0][0]]
         if "verbaleDating" in pcycle_data:
-            return pcycle_data["verbaleDating"]
+            return (pcycle_data["verbaleDating"], "cycle")
         
-        return None
+        return (None, None)
+
+    def get_img_url (self, id, dbname, table, field):
+        return self.find_img(id)[0]
+    
+    def get_licence (self, id, dbname, table, field):
+        res = self.find_img(id)[1]
+        if not res:
+            return False
+        return res.startswith("CC")
+        
+
+    @cached
+    def find_img (self, id):
+
+        lead = []
+        other = []
+        for conn in self.get_connections(id):
+            rid = conn["relTar"] if conn["ID"] == id else conn["ID"]
+            
+            if conn["sType"] == "LEAD_RESOURCE" and rid not in lead:
+                lead.append(rid)
+            elif conn["sType"] == "IMAGE" and rid not in other:
+                other.append(rid)
+                
+        if len(lead) == 0 and len(other) == 0: 
+            self.img_info["no_connection"].append(id)
+            return (None, None)
+        
+        # if resource["resProvider"] == "https://deckenmalerei-bilder.badw.de/":
+        #     url = self.easydb_api_prefix + "objects/uuid/" + resource["ID"]
+        #     f = urllib.request.urlopen(url)
+        #     data = json.loads(f.read())
+        #
+        #     try:
+        #         url = data["assets"]["datei"][0]["versions"]["small"]["url"]
+        #         licence = data["assets"]["copyright"]["_sort"]["de-DE"] if "copyright" in data["assets"] else None
+        #         return (url, licence)
+        #     except Exception:
+        #         print(data)
+        #         return (None, None)
+            
+        imageFound = False
+        for iid in lead:
+            resource = self.id_index_map[iid]
+            if resource["ID"] in self.fmd_map:
+                imageFound = True
+                break
+            
+        if not imageFound:
+            for iid in other:
+                resource = self.id_index_map[iid]
+                if resource["ID"] in self.fmd_map:
+                    imageFound = True
+                    break
+                
+        if imageFound:
+            if self.fmd_map[resource["ID"]]["licence"] and self.fmd_map[resource["ID"]]["licence"].startswith("CC"):
+                self.img_info["cc"].append((id, resource["ID"]))
+            else:
+                self.img_info["no_cc"].append((id, resource["ID"]))
+            return (self.fmd_map[resource["ID"]]["url"], self.fmd_map[resource["ID"]]["licence"])
+        
+        #No image
+        sources = []
+        for iid in lead + other:
+            resource = self.id_index_map[iid]
+            
+            if resource["ID"].startswith("fm"):
+                if not "fm" in sources:
+                    sources.append("fm")
+            elif resource["ID"].startswith("zi"):
+                if not "zi" in sources:
+                    sources.append("zi")
+            else:
+                if not "other" in sources:
+                    sources.append("other")
+                
+                
+        if len(sources) == 1 and sources[0] == "fm":
+            self.img_info["missing_fm"].append((id, resource["ID"]))
+        elif len(sources) == 1 and sources[0] == "zi":
+            self.img_info["missing_zi"].append((id, resource["ID"]))
+        elif len(sources) == 1 and sources[0] == "other":
+            self.img_info["missing_other"].append((id, resource["ID"]))
+        else:
+            print(sources)
+            self.img_info["missing_mixed"].append((id, resource["ID"]))
+        
+        return (None, None)
 
     @not_inferred
     def get_painting_dating (self, dating, dbname, table, field):
-        return self.infer_painting_dating(self.cid, dating)
+        return self.infer_painting_dating(self.cid, dating)[0]
 
     def get_start_year_painting (self, dating, dbname, table, field):
-        dating = self.infer_painting_dating (self.cid, dating)
+        dating = self.infer_painting_dating (self.cid, dating)[0]
         return self.handle_year(dating, dbname, table, field)[0]
     
     def get_end_year_painting (self, dating, dbname, table, field):
-        dating = self.infer_painting_dating (self.cid, dating)
+        dating = self.infer_painting_dating (self.cid, dating)[0]
         return self.handle_year(dating, dbname, table, field)[1]
     
     def get_year_approx_painting (self, dating, dbname, table, field):
-        dating = self.infer_painting_dating (self.cid, dating)
+        dating = self.infer_painting_dating (self.cid, dating)[0]
         return self.handle_year(dating, dbname, table, field)[2]
+    
+    def get_dating_source (self, dating, dbname, table, field):
+        return self.infer_painting_dating(self.cid, dating)[1]
 
     def get_start_year (self, dating, dbname, table, field):
         return self.handle_year(dating, dbname, table, field)[0]
@@ -257,6 +371,12 @@ class DM_Importer (Importer):
         if len(json_result["results"]["bindings"]) == 1:
             return json_result["results"]["bindings"][0]["item"]["value"].rsplit("/", 1)[-1]
         return None
+    
+    def get_gnd_from_normdata (self, normdata, dbname, table, field):
+        if normdata == None or not "gnd" in normdata:
+            return None
+        
+        return normdata["gnd"]
     
     def get_dim_part (self, dim, key):
         if dim == None or key not in dim:
@@ -344,6 +464,111 @@ class DM_Importer (Importer):
     def get_conn_name_from_type (self, full_name):
         return full_name
     
+    def create_fmd_map (self):
+        
+        try:
+            with open("date_fmd.txt") as datefile:
+                date = datetime.datetime.strptime(datefile.read().strip(), "%Y-%m-%d").date()
+                if date == datetime.date.today():
+                    print("Read FMD map")
+                    with open("fmd.json") as datafile:
+                        self.fmd_map = json.load(datafile)
+                    return
+        except Exception as e:
+            print(e)
+            pass
+        
+        print ("Create FMD map")
+        try:
+            url = self.easydb_api_prefix + "session"
+            f = urllib.request.urlopen(url)
+            data = json.loads(f.read())
+            token = data["token"]
+            #print(token)
+    
+            url = self.easydb_api_prefix + "session/authenticate"
+            postdata = urllib.parse.urlencode({
+                "token" : token,
+                "login" : "fzacherl",
+                "password" : "URt8hJ8hAMwjw5Zs27Abrcg$L%yIndE"
+            }).encode()
+            req =  urllib.request.Request(url, method="POST", data=postdata)
+            f = urllib.request.urlopen(req)
+            data = json.loads(f.read())
+            
+            http = urllib3.PoolManager()
+
+            ready = False
+            total = False
+            offset = 0
+            numPart = 1000
+            
+            while not ready:
+                postdata = {
+                    "limit" : numPart,
+                    "offset" : offset,
+                    "objecttypes" : ["assets"],
+                    "search" : [
+                        {
+                            "type" : "in",
+                            "bool" : "must",
+                            "fields" : ["assets._pool.pool._id"],
+                            "in": [2,5]
+                        }
+                    ]
+                }
+
+                r = http.request('POST', self.easydb_api_prefix + "search?token=" + token,
+                             headers= {'Content-Type': 'application/json'},
+                             body=json.dumps(postdata))
+                odata = json.loads(r.data.decode('utf-8'))
+            
+                if total == False:
+                    total = odata["count"]
+            
+                if len(odata["objects"]) == 0:
+                    break
+            
+                for obj in odata["objects"]:
+                    if not "assets" in obj or not "datei" in obj["assets"]:
+                        continue
+                    
+                    file = obj["assets"]["datei"][0]
+    
+                    if not "small" in file["versions"] or not "url" in file["versions"]["small"]:
+                        continue
+                    
+                    new_entry = {
+                        "url": file["versions"]["small"]["url"],
+                        "licence" : obj["assets"]["copyright"]["_sort"]["de-DE"] if "copyright" in obj["assets"] else None
+                    }
+                    
+                    self.fmd_map[obj["_uuid"]] = new_entry
+                    if obj["assets"]["_pool"]["pool"]["_id"] == 5: #Add fmd entries by deckenmalerei ID and by fmd ID, since some of them a referenced by deckenmalerei ID
+                        self.fmd_map[file["original_filename_basename"]] = new_entry
+                    
+                offset += numPart
+                ready = offset >= total
+                
+                print("Handled: " + str(offset) + " / " + str(total))
+            
+    
+        except urllib.error.HTTPError as err:
+            print(err.fp.read())
+            
+        with open("fmd.json", "w") as outfile:
+            outfile.write(json.dumps(self.fmd_map))
+            
+        with open("date_fmd.txt", "w") as datefile:
+            print(str(datetime.date.today()), file=datefile)
+    
 if __name__ == "__main__":
     importer = DM_Importer()
-    importer.do_import()
+    importer.create_fmd_map()
+    importer.do_import("OBJECT_PAINTING")
+    
+    for key in importer.img_info:
+        print (key + ": " + str(len(importer.img_info[key])))
+
+    for info in importer.img_info["missing_other"]:
+        print(info)

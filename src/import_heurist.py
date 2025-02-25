@@ -2,12 +2,11 @@ from src.importer import Importer, not_inferred
 import re
 from overrides import override
 from memoization import cached
-from Tools.scripts import startuptime
 
 class Heurist_Importer (Importer):
     def __init__ (self):
 
-        object_file = "../dumps/heurist/Export_PLAFOND_3D_20240220113727.json"
+        object_file = "../dumps/heurist/Export_PLAFOND_3D_20250225110423.json"
         connection_file = None
         
         self.temp_conns = []
@@ -56,7 +55,7 @@ class Heurist_Importer (Importer):
                 "name" : "buildings",
                 "primary_key": "id_building",
                 "import_columns": {
-                    "title" : "Titre courant / Titel",
+                    "title" : [("Titre courant / Titel", "Adresse actuelle (commune)"), "add_locality"],
                     "wikidata_id" : "ID wikidata édifice",
                     "country": "Pays",
                     "longitude": "Longitude X", #[("Latitude X", "Longitude Y"), "correct_lat_lng"],
@@ -71,7 +70,7 @@ class Heurist_Importer (Importer):
                     "dating_end_approx": ["Date supérieure / Spätestes Datum", "handle_approx"]
                 },
                 "lists" : {
-                    "building_function_join": ["Fonction / Funktion", "id_building_function", "building_functions", ("name_e", True), "create_building_function"]
+                    "building_function_join": ["Fonction / Funktion", "id_building_function", "building_functions", ("name_e", True), "create_building_function", False]
                 },
                 "connections" : {},
                 "auto_columns" : {
@@ -94,13 +93,13 @@ class Heurist_Importer (Importer):
                     "dating_end": ["Date supérieure pièce / spätestes Datum", "handle_date"],
                     "dating_start_approx": ["Date inférieure pièce / frühestes Datum Raum", "handle_approx"],
                     "dating_end_approx": ["Date supérieure pièce / spätestes Datum", "handle_approx"],
-                    "url_photo" : ["URL photo", "first_in_list"],
+                    "url_photo" : ["URL photo", "first_in_list"]
                 },
                 "lists" : {
-                    "room_function_join": ["Fonction au moment du décor", "id_room_function", "room_functions", ("name_e", True), "create_room_function"]
+                    "room_function_join": ["Fonction au moment du décor", "id_room_function", "room_functions", ("name_e", True), "create_room_function", False]
                 },
                 "connections" : {
-                    "room_person_join" : [["Personne"], "connection_type", "id_person", "persons"]
+                    "room_person_join" : [["Personne"], "connection_type", "id_person", "persons", False]
                 },
                 "auto_columns" : {
                     "source": ("CONST", "heurist")
@@ -118,18 +117,21 @@ class Heurist_Importer (Importer):
                     "dating_start_approx": ["Date inférieure / Frühestes Datum", "handle_approx"],
                     "dating_end_approx": ["Date supérieure / Spätestes Datum", "handle_approx"],
                     "condition" : ["État de conservation / Erhaltungszustand", "find_mapped_name"],
-                    "url_photo" : ["URL photo / URL Fotografie", "first_in_list"],
+                    "url_photo" : ["URL photo / URL Fotografie", "get_img_url"],
+                    "url_invalid" : ["URL photo / URL Fotografie", "get_img_invalid"],
+                    'cc_licence' : ["URL photo / URL Fotografie", "is_cc"],
                     "signature" : "Inscription signature / Inschrift, Signatur",
                 },
                 "lists" : {
                     "plafond_iconclass_join": 
-                        [("Centre Iconclass / Iconlass der Deckenmitte", "Côté Iconclass / Iconclass der Seitenbereiche", "Iconclass sujet général / Iconclass, Allgemeines Sujet"), "iconclass_id", "iconclasses", ("iconclass_id", False), "create_iconclass"],
+                        [("Centre Iconclass / Iconlass der Deckenmitte", "Côté Iconclass / Iconclass der Seitenbereiche", "Iconclass sujet général / Iconclass, Allgemeines Sujet"), "iconclass_id", "iconclasses", ("iconclass_id", False), "create_iconclass", False],
                 },
                 "connections" : {
-                    "plafond_person_join" : [["Personne"], "connection_type", "id_person", "persons"]
+                    "plafond_person_join" : [["Personne"], "connection_type", "id_person", "persons", False]
                 },
                 "auto_columns" : {
-                    "source": ("CONST", "heurist")
+                    "source": ("CONST", "heurist"),
+                    "dating_source": ("CONST", "plafond")
                 }
             },
         }
@@ -140,6 +142,42 @@ class Heurist_Importer (Importer):
         }
         
         super().__init__(object_file, connection_file, basic_info, object_table_mapping)
+       
+    @not_inferred
+    def get_img_url (self, val, dbname, table, field):
+        return self.handle_img_urls(val)[0]
+    
+    @not_inferred
+    def get_img_invalid (self, val, dbname, table, field):
+        return self.handle_img_urls(val)[1]
+     
+    @cached
+    def handle_img_urls (self, urls):
+        if urls is None:
+            return (None, False)
+        
+        for url in urls:
+            if self.check_url(url):
+                return (url, False)
+            
+        return (urls[0], True)
+        
+    @not_inferred
+    def add_locality (self, val, dbname, table, field):
+        if not val["Titre courant / Titel"]:
+            return ""
+        
+        if not val["Adresse actuelle (commune)"]:
+            return val["Titre courant / Titel"]
+        
+        return val["Adresse actuelle (commune)"] + ", " + val["Titre courant / Titel"]
+        
+    @not_inferred
+    def is_cc (self, val, dbname, table, field):
+        if val is None or not val[0]:
+            return False
+        
+        return val[0].startswith("https://upload.wikimedia.org")
        
     @not_inferred
     def parse_dim (self, s, dbname, table, field):
