@@ -7,6 +7,7 @@ import urllib.parse
 import urllib.request
 from memoization import cached
 import requests
+import time
 
 class NameMappingException(Exception):
     def __init__(self, name):
@@ -19,6 +20,8 @@ def not_inferred (func):
 
 class Importer:
     def __init__ (self, object_file, connection_file, basic_info, object_table_mapping):
+        
+        self.CHECK_EXTERNAL = False #Set this to true to check wikidata entries and image urls!!!!!!
         
         self.object_file = object_file
         self.connection_file = connection_file
@@ -33,6 +36,7 @@ class Importer:
         self.conn_dir_field = basic_info["conn_dir_field"]
         
         self.connection_table_mapping = {}
+        self.name_statistics = {}
         
         self.changes = {}
         self.changes_conns = {}
@@ -59,6 +63,10 @@ class Importer:
     
     @abc.abstractmethod
     def get_conn_name_from_type (self, full_name):
+        pass
+    
+    @abc.abstractmethod
+    def finalize_statistics_data (self):
         pass
         
     def do_import (self, only = None):
@@ -164,6 +172,13 @@ class Importer:
                 self.conn.commit()
               
         print("Create statistics ...")
+        self.finalize_statistics_data()
+        
+        for nkey in self.name_statistics:
+            (n_dbname, n_table, n_field, n_key) = nkey.split("#")
+            sql = "UPDATE name_mapping SET `count` = %s WHERE `source` = %s AND `table` = %s AND `field` = %s AND `input` = %s"
+            self.cur.execute(sql, (self.name_statistics[nkey], n_dbname, n_table, n_field, n_key))
+            
                 
         sql = "DELETE FROM plafond.import_statistics WHERE source = %s"
         params = (self.dbname,)
@@ -190,10 +205,15 @@ class Importer:
         print("Finished!")
         
     def check_url (self, url):
+        if not self.CHECK_EXTERNAL:
+            return True
+        
         try:
-            get = requests.head(url, allow_redirects=True)
+            time.sleep(0.05)
+            headers = {'User-Agent': 'PlafondURLCheck/0 (https://www.plafond3d.gwi.uni-muenchen.de/)'}
+            get = requests.head(url, headers=headers)
             
-            if get.status_code != 404:
+            if get.status_code == 200:
                 return True
             
             return False
@@ -293,9 +313,38 @@ class Importer:
         except urllib.error.HTTPError as err:
             raise Exception(err)
         
-    def combine_lists_to_single_fields (self, params, dbname, table, field):
+    def get_mapped_name_internal (self, key, dbname, table, field):
+        stat_key = dbname + "#" + table + "#" + field + "#" + key
+        
         name_mapping = self.get_type_name_mapping(dbname, table, field)
         
+        if key not in name_mapping or not name_mapping[key]:
+            if key not in name_mapping:
+                sql = "INSERT IGNORE INTO plafond.name_mapping (`source`, `table`, `field`, `input`, `output`) VALUES (%s, %s, %s, %s, '')"
+                self.cur.execute(sql, (self.dbname, table, field, key))
+                self.conn.commit()
+                           
+            print("Value \"" + key + "\" for id " + self.cid + " not found in name mapping for source \"" + self.dbname + "\",  table \"" + table + "\",  field \"" + field + "\"")
+            return None
+        
+        if not stat_key in self.name_statistics:
+            self.name_statistics[stat_key] = 0
+            
+        self.name_statistics[stat_key] += 1
+        
+        res = name_mapping[key]
+        
+        if res == "NONE":
+            return None
+        
+        return res
+    
+    @not_inferred
+    def combine_lists_to_single_fields_overwrite (self, params, dbname, table, field):
+        return self.combine_lists_to_single_fields (params, dbname, table, field)
+        
+        
+    def combine_lists_to_single_fields (self, params, dbname, table, field):
         res = ""
         for key, slist in params.items():
             if slist != None and len(slist) > 0:
@@ -306,46 +355,17 @@ class Importer:
         if res == "":
             res = "NONE"
             
-        if not self.check_in_name_mapping(res, name_mapping, table, field):
-            return None
-        
-        mapped_name = name_mapping[res]
-        
-        if mapped_name == "NONE":
-            return None
-        
-        return mapped_name
+        return self.get_mapped_name_internal(res, dbname, table, field)
         
         
     def combine_to_single_field (self, params, dbname, table, field):
-        name_mapping = self.get_type_name_mapping(dbname, table, field)
         
         if params == None:
             key = "NONE"
         else:
             key = "+".join([key for key, val in params.items() if val])
 
-        if not self.check_in_name_mapping(key, name_mapping, table, field):
-            return None
-
-        mapped_name = name_mapping[key]
-        
-        if mapped_name == "NONE":
-            return None
-        
-        return mapped_name
-    
-    def check_in_name_mapping (self, key, name_mapping, table, field):
-        if key not in name_mapping or not name_mapping[key]:
-            if key not in name_mapping:
-                sql = "INSERT IGNORE INTO plafond.name_mapping (`source`, `table`, `field`, `input`, `output`) VALUES (%s, %s, %s, %s, '')"
-                self.cur.execute(sql, (self.dbname, table, field, key))
-                self.conn.commit()
-                           
-            print("Value \"" + key + "\" for id " + self.cid + " not found in name mapping for source \"" + self.dbname + "\",  table \"" + table + "\",  field \"" + field + "\"")
-            return False
-        
-        return True
+        return self.get_mapped_name_internal(key, dbname, table, field)
     
     @not_inferred
     def none_to_empty (self, s, dbname, table, field):
@@ -361,7 +381,10 @@ class Importer:
         return ",".join(s)
     
     def sparql_wikidata (self, query):
-        return None #TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+        if not self.CHECK_EXTERNAL:
+            return None
+
         url = self.wikidata_api_prefix + urllib.parse.quote(query) + "&format=json"
         
         try:
@@ -398,17 +421,7 @@ class Importer:
         if val == None:
             return None
         
-        name_mapping = self.get_type_name_mapping(dbname, table, field)
-        
-        if not self.check_in_name_mapping(val, name_mapping, table, field):
-            return None
-        
-        mapped_name = name_mapping[val]
-        
-        if mapped_name == "NONE":
-            return None
-        
-        return mapped_name
+        return self.get_mapped_name_internal(val, dbname, table, field)
     
     def get_field_data (self, row, dbfield, field_info, entry_id, info):
         table = info["name"]
@@ -491,8 +504,6 @@ class Importer:
         conns = self.get_connections(eid)
         ret = []
         
-        tname_mapping = self.get_type_name_mapping(source, table, field)
-        
         for conn in conns:
             curr_type = self.type_mapping[conn[self.conn_id2]]
             
@@ -505,11 +516,11 @@ class Importer:
                         continue
                 
                 conn_name = self.get_conn_name_from_type(conn_type_orig)
-                
-                if not self.check_in_name_mapping(conn_name, tname_mapping, table, field) or tname_mapping[conn_name] == "NONE":
+                mapped_name = self.get_mapped_name_internal(conn_name, source, table, field)
+                if mapped_name == None:
                     continue
 
-                ret.append((conn[self.conn_id2], tname_mapping[conn_name], conn_type_orig))
+                ret.append((conn[self.conn_id2], mapped_name, conn_type_orig))
         
         return ret
     

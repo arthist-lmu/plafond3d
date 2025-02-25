@@ -126,7 +126,7 @@ class DM_Importer (Importer):
                     "dating_end": ["verbaleDating", "get_end_year_painting"],
                     "dating_end_approx" : ["verbaleDating", "get_year_approx_painting"],
                     "dating_source" : ["verbaleDating", "get_dating_source"],
-                    "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields"],
+                    "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields_overwrite"],
                     "condition" : ["condition", "combine_to_single_field"],
                     "url_photo" : ["ID", "get_img_url"],
                     "cc_licence" : ["ID", "get_licence"],
@@ -334,7 +334,7 @@ class DM_Importer (Importer):
         if matchObject:
             return (int(matchObject[1]), int(matchObject[1][0:2] + matchObject[2]), False)
         
-        matchObject = re.match("^([1-9][0-9])(\.)? Jh\.$", dating) #TODO maybe require the dot after the number
+        matchObject = re.match("^([1-9][0-9])(\\.)? Jh\\.$", dating) #TODO maybe require the dot after the number
         if matchObject:
             century = int(matchObject[1])
             return ((century - 1) * 100 + 1, century * 100, True)
@@ -561,11 +561,14 @@ class DM_Importer (Importer):
             
         with open("date_fmd.txt", "w") as datefile:
             print(str(datetime.date.today()), file=datefile)
+            
+    def finalize_statistics_data (self):
+        pass
     
 if __name__ == "__main__":
     importer = DM_Importer()
     importer.create_fmd_map()
-    importer.do_import("OBJECT_PAINTING")
+    importer.do_import()
     
     for key in importer.img_info:
         print (key + ": " + str(len(importer.img_info[key])))

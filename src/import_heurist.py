@@ -23,13 +23,13 @@ class Heurist_Importer (Importer):
         
         self.person_data = {
             "Pièce" : [
-                {"fields" : {"full_name": "Architecte / Architekt", "qid": "ID wikidata Architecte / Architekt"}, "connection": "Architecte / Architekt"},
-                {"fields" : {"full_name": "Artiste(s) - Auteur(s) décor mural / Autor der Wanddekoration", "qid": "ID wikidata Artiste(s)/Auteur(s) décor mural / Autor der Wanddekoration"}, "connection": "Artiste"}
+                {"fields" : {"full_name": "Architecte / Architekt", "wikidata_id": "ID wikidata Architecte / Architekt"}, "connection": "Architecte / Architekt"},
+                {"fields" : {"full_name": "Artiste(s) - Auteur(s) décor mural / Autor der Wanddekoration", "wikidata_id": "ID wikidata Artiste(s)/Auteur(s) décor mural / Autor der Wanddekoration"}, "connection": "Artiste"}
             ],
             "Plafond" : [
-                 {"fields" : {"full_name": "Auteur(s) principal / Autor", "qid": "ID wikidata auteur(s) principal / ID wikidata Autor"}, "connection": "Auteur"},
-                {"fields" : {"full_name": "Auteur(s) secondaires / Mitarbeiter", "qid": "ID wikidata auteur(s) secondaire(s) / ID wikidata Mitarbeiter"}, "connection": "Auteur"},
-                {"fields" : {"full_name": "Commanditaire(s) / Auftrageber*in", "qid" : "ID wikidata commanditaire(s) / ID wikidata Auftrageber*in"}, "connection": "Commanditaire"}
+                 {"fields" : {"full_name": "Auteur(s) principal / Autor", "wikidata_id": "ID wikidata auteur(s) principal / ID wikidata Autor"}, "connection": "Auteur"},
+                {"fields" : {"full_name": "Auteur(s) secondaires / Mitarbeiter", "wikidata_id": "ID wikidata auteur(s) secondaire(s) / ID wikidata Mitarbeiter"}, "connection": "Auteur"},
+                {"fields" : {"full_name": "Commanditaire(s) / Auftrageber*in", "wikidata_id" : "ID wikidata commanditaire(s) / ID wikidata Auftrageber*in"}, "connection": "Commanditaire"}
             ]
         }
             
@@ -41,8 +41,8 @@ class Heurist_Importer (Importer):
                     "full_name": ["full_name", "handle_full_name"],
                     "first_name" : ["full_name", "get_first_name"],
                     "last_name" : ["full_name", "get_last_name"],
-                    "wikidata_id" : ["qid", "handle_qid"],
-                    "gender" : ["qid", "get_gender"]
+                    "wikidata_id" : ["wikidata_id", "handle_qid"],
+                    "gender" : ["wikidata_id", "get_gender"]
                 },
                 "lists" : {},
                 "connections" : {},
@@ -121,6 +121,7 @@ class Heurist_Importer (Importer):
                     "url_invalid" : ["URL photo / URL Fotografie", "get_img_invalid"],
                     'cc_licence' : ["URL photo / URL Fotografie", "is_cc"],
                     "signature" : "Inscription signature / Inschrift, Signatur",
+                    "technique" : ["Technique / Technik", "find_mapped_name"]
                 },
                 "lists" : {
                     "plafond_iconclass_join": 
@@ -344,6 +345,19 @@ class Heurist_Importer (Importer):
                         del obj[ofield]
 
         return (obj, pdata)
+    
+    def finalize_statistics_data (self):
+
+        # Remove statistics data from the type "Personne" needed for the import and move it to the actual db fields
+        del self.statistics["Personne"]
+        
+        for otype in self.person_data:
+            for info in self.person_data[otype]:
+                for field_pseudo in info["fields"]:
+                    field_orig = info["fields"][field_pseudo]
+                    for field_db in self.object_table_mapping["Personne"]["import_columns"]:
+                        if self.object_table_mapping["Personne"]["import_columns"][field_db][0] == field_pseudo:
+                            self.update_statistics(otype, field_orig, "persons->" + field_db)
     
     def conn_function (self, conns):
         return self.temp_conns
