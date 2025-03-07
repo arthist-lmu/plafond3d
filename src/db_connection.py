@@ -20,12 +20,12 @@ def conn_3310 (db = "plafond", **user_data):
     if "passwd" in user_data:
         ldata[1] = user_data["passwd"] 
     
-    host = "localhost"
-    port = 3311
-    ldata[0] = "root"
-    ldata[1] = ""
+    # host = "localhost"
+    # port = 3311
+    # ldata[0] = "root"
+    # ldata[1] = ""
     
-    #host = "gwi-sql.gwi.uni-muenchen.de"
-    #port = 3309
+    host = "gwi-sql.gwi.uni-muenchen.de"
+    port = 3309
     
     return pymysql.connect(host= host, port=port, db=db, user=ldata[0], passwd=ldata[1], charset='utf8', ssl={"stub": 0})

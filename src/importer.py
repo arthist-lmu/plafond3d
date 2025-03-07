@@ -289,25 +289,41 @@ class Importer:
                 
     
     def create_iconclass (self, val, dbname):
+        print("Create iconclass: " + val)
+        
         url = "https://iconclass.org/" + urllib.parse.quote(val) + ".json"
         
         try:
             f = urllib.request.urlopen(url)
             json_str = f.read()
             data = json.loads(json_str)
-            sql = "INSERT INTO plafond.iconclasses (iconclass_id, description, iconclass_id_0, iconclass_id_1, iconclass_id_2, description_de, description_fr) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+            
             if data == None:
                 raise Exception("Non-valid json: " + str(json_str) + " for iconclass " + val)
 
-            id_0 = data["p"][0]
-            id_1 = data["p"][1] if 1 in data["p"] else id_0
-            id_2 = data["p"][2] if 2 in data["p"] else id_1
-            
             descr_en = data["txt"]["en"]
             descr_de = data["txt"]["de"] if "de" in data["txt"] else ""
             descr_fr = data["txt"]["fr"] if "fr" in data["txt"] else ""
+            params = [val, descr_en, descr_de, descr_fr, data["p"][0]]
+
+            ic_max_level = 10
+            last = data["p"][0]
+            for ic_level in range(1, ic_max_level + 1):
+                if len(data["p"]) > ic_level:
+                    last = data["p"][ic_level]
+                    if last != val:
+                        sql = "SELECT iconclass_id FROM iconclasses WHERE iconclass_id = %s"
+                        self.cur.execute(sql, last)
+                        if not self.cur.fetchone():
+                            self.create_iconclass (last, dbname)
+                params.append(last)
+               
             
-            self.cur.execute(sql, [val, descr_en, id_0, id_1, id_2, descr_de, descr_fr])
+            sql = """INSERT INTO plafond.iconclasses (iconclass_id, description, description_de, description_fr, iconclass_id_0, iconclass_id_1, iconclass_id_2, iconclass_id_3, iconclass_id_4, 
+                iconclass_id_5, iconclass_id_6, iconclass_id_7, iconclass_id_8, iconclass_id_9, iconclass_id_10) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                
+            self.cur.execute(sql, params)
             
             return val
         except urllib.error.HTTPError as err:
@@ -356,6 +372,10 @@ class Importer:
             res = "NONE"
             
         return self.get_mapped_name_internal(res, dbname, table, field)
+        
+    @not_inferred
+    def combine_to_single_field_overwrite (self, params, dbname, table, field):
+        return self.combine_to_single_field ( params, dbname, table, field)
         
         
     def combine_to_single_field (self, params, dbname, table, field):
@@ -568,7 +588,7 @@ class Importer:
                 values.append(new_val)
                 all_values.append(new_val)
             elif new_val and old_val and new_val != old_val:
-                raise Exception("Different value in database for inferred value: " + info["name"] + " " + str(old_data[0]) 
+                print("UPDATE NOT POSSIBLE! Different value in database for inferred value: " + info["name"] + " " + str(old_data[0]) 
                                 + " field '" + db_field + "': Old value = '" + str(old_val) + "', new value = '" + str(new_val) + "'")
             else:
                 all_values.append(old_val)
@@ -656,7 +676,7 @@ class Importer:
                         if type(oval) != list:
                             oval = [oval]
                             
-                        self.cur.execute(sql, (self.dbname, info["name"], entry_id, name_export, json.dumps(oval), "AUTO:" + json_valid))
+                        self.cur.execute(sql, (self.dbname, info["name"], entry_id, name_export, json.dumps(oval), json_valid)) #"AUTO:" + 
                         self.conn.commit()
                     except Exception as e:
                         print("Values from changes still not working for " + entry_id + ", field '" + name_export + "'. Invalid elements: " + str(invalid_elements))

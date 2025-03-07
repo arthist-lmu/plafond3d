@@ -24,8 +24,8 @@ class DM_Importer (Importer):
         }
         self.easydb_api_prefix = "https://deckenmalerei-bilder.badw.de/api/v1/"
 
-        object_file = ["../dumps/deckenmalerei.eu/2023_11/entities.json", "../dumps/deckenmalerei.eu/2023_11/resources.json"]
-        connection_file = "../dumps/deckenmalerei.eu/2023_11/relations.json"
+        object_file = ["../dumps/deckenmalerei.eu/2025_02/entities.json", "../dumps/deckenmalerei.eu/2025_02/resources.json"]
+        connection_file = "../dumps/deckenmalerei.eu/2025_02/relations.json"
         
         basic_info = {
             "id_field": "ID",
@@ -60,7 +60,7 @@ class DM_Importer (Importer):
                 "name": "buildings",
                 "primary_key" : "id_building",
                 "import_columns": {
-                    "title": "appellation",
+                    "title": ["appellation", "handle_title"],
                     "wikidata_id": ["normdata", "find_qid_from_normdata"],
                     "longitude": ["locationLng", "to_str"],
                     "latitude": ["locationLat", "to_str"],
@@ -68,7 +68,7 @@ class DM_Importer (Importer):
                     "address_zip": "addressZip",
                     "address_locality": "addressLocality",
                     "country": ["addressCountry", "find_mapped_name"],
-                    "condition" : ["condition", "combine_to_single_field"],
+                    "condition" : ["condition", "combine_to_single_field_overwrite"],
                     "dating_original": "verbaleDating",
                     "dating_start": ["verbaleDating", "get_start_year"],
                     "dating_start_approx" : ["verbaleDating", "get_year_approx"],
@@ -90,9 +90,9 @@ class DM_Importer (Importer):
                 "name" : "rooms",
                 "primary_key": "id_room",
                 "import_columns" : {
-                    "title": "appellation",
+                    "title": ["appellation", "handle_title"],
                     "id_building": ["FK", "find_building_for_room"],
-                    "condition": ["condition", "combine_to_single_field"],
+                    "condition": ["condition", "combine_to_single_field_overwrite"],
                     "width" : ["dimension", "get_width"],
                     "length" : ["dimension", "get_length"],
                     "height" : ["dimension", "get_height"],
@@ -118,7 +118,7 @@ class DM_Importer (Importer):
                 "name" : "plafonds",
                 "primary_key": "id_plafond",
                 "import_columns": {
-                    "title" : "appellation",
+                    "title" : ["appellation", "handle_title"],
                     "id_room": ["FK", "find_room_for_plafond"],
                     "dating_original": ["verbaleDating", "get_painting_dating"],
                     "dating_start": ["verbaleDating", "get_start_year_painting"],
@@ -127,7 +127,7 @@ class DM_Importer (Importer):
                     "dating_end_approx" : ["verbaleDating", "get_year_approx_painting"],
                     "dating_source" : ["verbaleDating", "get_dating_source"],
                     "technique" : [("productionMaterials", "productionMethods"), "combine_lists_to_single_fields_overwrite"],
-                    "condition" : ["condition", "combine_to_single_field"],
+                    "condition" : ["condition", "combine_to_single_field_overwrite"],
                     "url_photo" : ["ID", "get_img_url"],
                     "cc_licence" : ["ID", "get_licence"],
                     "signature" : "signature"
@@ -151,6 +151,7 @@ class DM_Importer (Importer):
     def data_function (self, data):
         for row in data:
             self.id_index_map[row["ID"]] = row
+
         return data
     
     def conn_function (self, conns):
@@ -188,15 +189,23 @@ class DM_Importer (Importer):
         
         return (None, None)
 
+    @not_inferred
     def get_img_url (self, id, dbname, table, field):
         return self.find_img(id)[0]
     
+    @not_inferred
     def get_licence (self, id, dbname, table, field):
         res = self.find_img(id)[1]
         if not res:
             return False
         return res.startswith("CC")
         
+    @not_inferred
+    def handle_title (self, title, dbname, table, field):
+        if not title:
+            return "(Missing title)"
+        
+        return title
 
     @cached
     def find_img (self, id):
@@ -293,6 +302,7 @@ class DM_Importer (Importer):
         dating = self.infer_painting_dating (self.cid, dating)[0]
         return self.handle_year(dating, dbname, table, field)[2]
     
+    @not_inferred
     def get_dating_source (self, dating, dbname, table, field):
         return self.infer_painting_dating(self.cid, dating)[1]
 
@@ -570,8 +580,8 @@ if __name__ == "__main__":
     importer.create_fmd_map()
     importer.do_import()
     
-    for key in importer.img_info:
-        print (key + ": " + str(len(importer.img_info[key])))
-
-    for info in importer.img_info["missing_other"]:
-        print(info)
+    # for key in importer.img_info:
+    #     print (key + ": " + str(len(importer.img_info[key])))
+    #
+    # for info in importer.img_info["missing_other"]:
+    #     print(info)
