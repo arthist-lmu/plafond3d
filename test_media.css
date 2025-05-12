@@ -1,0 +1,80 @@
+@media print {
+  /* Basic Reset */
+  * {
+    background: none !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Typography */
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Page Margins */
+  @page {
+    margin: 2cm;
+  }
+
+  /* Hide Non-Printable Elements */
+  header, footer, nav, aside, .menu, .hero, .adslot, .interactive-widget, .social-icons, form, iframe, video, audio {
+    display: none !important;
+  }
+
+  /* Content Width */
+  main, article, .content {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+  }
+
+  /* Links: Show URLs */
+  a::after {
+    content: " (" attr(href) ")";
+    font-size: 90%;
+  }
+
+  /* Prevent Page Breaks Inside Elements */
+  blockquote, pre, ul, ol, dl {
+    page-break-inside: avoid;
+  }
+
+  /* Columns for Better Readability */
+  article {
+    column-width: 17em;
+    column-gap: 3em;
+  }
+
+  /* Optional: Add Page Numbers */
+  @page {
+    @bottom-right {
+      content: counter(page);
+      font-size: 10pt;
+    }
+  }
+}
