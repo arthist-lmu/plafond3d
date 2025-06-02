@@ -22,7 +22,7 @@
   }
 
   /* Hide Non-Printable Elements */
-  header, footer, nav, aside, .menu, .hero, .adslot, .interactive-widget, .social-icons, form, iframe, video, audio {
+  header, footer, nav, aside, .menu, .hero, .adslot, .interactive-widget, .social-icons, form, iframe, video, audio, .CookieConsent {
     display: none !important;
   }
 
