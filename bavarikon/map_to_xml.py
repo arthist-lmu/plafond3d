@@ -16,13 +16,13 @@ def timestamp_to_iso(ts):
 
 def main():
     # Load JSON data
-    entities = load_json('entities.json')
+    entities = load_json('dumps/deckenmalerei.eu/2025_02/entities.json')
     try:
-        relations = load_json('relations.json')
+        relations = load_json('dumps/deckenmalerei.eu/2025_02/relations.json')
     except FileNotFoundError:
         relations = []
     try:
-        resources = load_json('resources.json')
+        resources = load_json('dumps/deckenmalerei.eu/2025_02/resources.json')
     except FileNotFoundError:
         resources = []
 

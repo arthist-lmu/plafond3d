@@ -1,10 +1,16 @@
 @media print {
+
   /* PDF Test page: https://www.deckenmalerei.eu/d0fe071a-afd2-4d41-acf9-13b92bc46993 */
   * {
     background: none !important;
     color: #000 !important;
     box-shadow: none !important;
     text-shadow: none !important;
+  }
+
+  /* Hide in-page link icons in print */
+  a>i.material-icons[data-icon="link"] {
+    display: none !important;
   }
 
   /* Typography */
@@ -22,12 +28,27 @@
   }
 
   /* Hide Non-Printable Elements */
-  header, footer, nav, aside, .menu, .hero, .adslot, .interactive-widget, .social-icons, form, iframe, video, audio, .CookieConsent {
+  header,
+  footer,
+  nav,
+  aside,
+  .menu,
+  .hero,
+  .adslot,
+  .interactive-widget,
+  .social-icons,
+  form,
+  iframe,
+  video,
+  audio,
+  .CookieConsent {
     display: none !important;
   }
 
   /* Content Width */
-  main, article, .content {
+  main,
+  article,
+  .content {
     width: 100%;
     margin: 0;
     padding: 0;
@@ -41,7 +62,12 @@
   }
 
   /* Headings */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     page-break-after: avoid;
     page-break-inside: avoid;
   }
@@ -60,7 +86,11 @@
   }
 
   /* Prevent Page Breaks Inside Elements */
-  blockquote, pre, ul, ol, dl {
+  blockquote,
+  pre,
+  ul,
+  ol,
+  dl {
     page-break-inside: avoid;
   }
 
