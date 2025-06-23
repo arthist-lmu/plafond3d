@@ -57,8 +57,18 @@ async def save_page_as_pdf(url):
                     link.click();
                 }
             });
+            // Click all <a> elements with href matching a UUID pattern, but only inside .expandedBlock
+            document.querySelectorAll('.expandedBlock a[href]').forEach(function(link) {
+                if (/\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/.test(link.getAttribute('href'))) {
+                    if (link.offsetParent !== null) {
+                        link.click();
+                    }
+                }
+            });
         """
         )
+        # Wait for any navigation caused by clicking links
+        await page.wait_for_load_state("networkidle")
         logging.info("Injecting custom CSS into the page")
         await page.add_style_tag(content=custom_css)
         logging.info(f"Saving page as PDF to {output_path}")

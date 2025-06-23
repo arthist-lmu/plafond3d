@@ -16,7 +16,7 @@
   /* Typography */
   body {
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 12pt;
+    font-size: 16pt;
     line-height: 1.6;
     margin: 0;
     padding: 0;
@@ -41,6 +41,7 @@
   iframe,
   video,
   audio,
+  .text-right,
   .CookieConsent {
     display: none !important;
   }
@@ -94,7 +95,7 @@
     column-gap: 3em;
   }
 
-  /* Optional: Add Page Numbers */
+  /* Add Page Numbers */
   @page {
     @bottom-right {
       content: counter(page);
