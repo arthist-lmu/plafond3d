@@ -16,7 +16,7 @@
 ```bash
 poetry install
 # install the Playwright browser binaries
-poetry run playwright install firefox
+poetry run playwright install chromium
 ```
 
 This step is required only once after setting up the project or when updating Playwright to a new major version.
