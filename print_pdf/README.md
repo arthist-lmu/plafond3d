@@ -11,3 +11,18 @@
 * **playwright**
 * **BeautifulSoup (bs4)**
 
+## Setup
+
+```bash
+poetry install
+# install the Playwright browser binaries
+poetry run playwright install firefox
+```
+
+This step is required only once after setting up the project or when updating Playwright to a new major version.
+
+## Development
+
+Testpage:
+Aschendorf, Herrenhaus und Amtssitz Altenkamp
+<https://www.deckenmalerei.eu/0c728050-c5af-11e9-893a-a37e5cdc9651>

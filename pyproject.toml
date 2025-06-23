@@ -3,17 +3,22 @@ name = "plafond3d"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
-requests = "^2.28.1"
+python = "^3.12"
+requests = "^2.32.4"
 bs4 = "^0.0.1"
-requests-cache = "^0.9.7"
-selenium = "^4.6.0"
-lxml = "^4.9.1"
+requests-cache = "^0.9.8"
+lxml = "^4.9.4"
+playwright = "^1.52.0"
 
-[tool.poetry.dev-dependencies]
+[poetry.group.dev.dependencies]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
+poetry-plugin-up = ">=0.9"
