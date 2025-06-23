@@ -51,6 +51,12 @@ async def save_page_as_pdf(url):
                     track.style.display = 'block';
                 }
             });
+            // Click all expand/collapse links that control expandedBlock elements
+            document.querySelectorAll('.expandLink a').forEach(function(link) {
+                if (link.offsetParent !== null) { // Only click visible links
+                    link.click();
+                }
+            });
         """
         )
         logging.info("Injecting custom CSS into the page")

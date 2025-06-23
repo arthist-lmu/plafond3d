@@ -79,12 +79,6 @@
     page-break-inside: avoid;
   }
 
-  /* Links: Show URLs */
-  a::after {
-    content: " (" attr(href) ")";
-    font-size: 90%;
-  }
-
   /* Prevent Page Breaks Inside Elements */
   blockquote,
   pre,
