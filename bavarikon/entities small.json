@@ -1,0 +1,47 @@
+[
+  {
+    "shortText": "Im Vestib\u00fcl hat sich Wandmalerei erhalten. Unter einer Zweitfassung von 1776-1778 mit Personendarstellungen von Casimirus Fischer scheint durch Fehlstellen und Freilegungsproben die Erstfassung von 1728/36 mit Landschaftsdarstellungen und Architekturveduten durch.",
+    "creationDate": 1566569123029,
+    "mType": "ENT",
+    "appellation": "Aschendorf, Herrenhaus und Amtssitz Altenkamp",
+    "ID": "0c728050-c5af-11e9-893a-a37e5cdc9651",
+    "sType": "TEXT"
+  },
+  {
+    "verbaleDating": "1728-36",
+    "addressState": "Niedersachsen",
+    "addressLocality": "Papenburg",
+    "alternativeNames": [
+      "Gut Altenkamp",
+      "adelig freies Haus Altenkamp"
+    ],
+    "buildingInventoryNumber": "cbdd10014",
+    "addressStreet": "Am Altenkamp 1",
+    "creationDate": 1566569410893,
+    "appellation": "Aschendorf, Haus Altenkamp",
+    "moduleNumber": 1,
+    "functions": [
+      "ADMINISTRATION_BUILDINGS",
+      "ESTATES_RESIDENTIAL_COMPLEXES"
+    ],
+    "locationLng": 7.340947784539217,
+    "locationLat": 53.05245498745724,
+    "normdata": {
+      "gnd": "4631513-5",
+      "bildindex": "obj20713686"
+    },
+    "mType": "ENT",
+    "ID": "46d47900-c5ab-11e9-b229-6b499a37f581",
+    "addressCountry": "Deutschland",
+    "addressZip": "26871",
+    "sType": "OBJECT_BUILDING"
+  },
+  {
+    "verbaleDating": "1776-1778",
+    "creationDate": 1566567879924,
+    "mType": "ENT",
+    "appellation": "Landschaftsdarstellungen u.a. mit Jagdszenen und Jahreszeitenzyklus",
+    "ID": "277fbb40-c5ac-11e9-893a-a37e5cdc9651",
+    "sType": "OBJECT_PAINTING"
+  }
+]

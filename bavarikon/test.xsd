@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- bavarikon-Lieferformat.xsd -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  targetNamespace="https://www.bavarikon.de"
+  xmlns="https://www.bavarikon.de"
+  elementFormDefault="qualified"
+  version="1.0.0 | 2022-11-08">
+  
+<xs:element name="bavarikonDatenlieferung">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Kulturobjekt" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="datenpaket_name" use="required" type="tokenNotEmpty"/>
+      <xs:attribute name="export_zeitstempel" use="required" type="xs:dateTime"/>
+      <xs:attribute name="schema_version" use="required" type="schemaVersion"/>
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:simpleType name="schemaVersion">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]+\.[0-9]+\.[0-9]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <xs:element name="Kulturobjekt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="bav01_bavarikonProjektnummer"/>
+        <xs:element ref="bav02_LieferID" />
+        <xs:element ref="bav03_AnzeigeID" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav04_DatenlieferndeInstitution"/>
+        <xs:element ref="bav05_BestandshaltendeInstitution"/>
+        <xs:element ref="bav06_BeteiligteInstitution" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav07_Titel_Name_Objektbezeichnung"/> 
+        <xs:element ref="bav08_Alternativtitel" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav09_Beschreibungstext" minOccurs="0" maxOccurs="1"/>
+        <xs:element ref="bav10_Objektkategorie" maxOccurs="unbounded"/>
+        <xs:element ref="bav11_Schlagwort_Thema" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav12_Ereignis" maxOccurs="unbounded"/>
+        <xs:element ref="bav13_Sprache" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav14_Material" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav15_Umfang_Abmessungen_Laufzeit" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav16_Bemerkung" minOccurs="0" maxOccurs="unbounded"/>
+        <xs:element ref="bav17_RechtedeklarationMetadaten"/>
+        <xs:element ref="bav18_RechtedeklarationBeschreibungstext" minOccurs="0"/>
+        <xs:element ref="bav19_RechtedeklarationDigitalisat"/>
+        <xs:element ref="bav20_Permalink_DigitalesObjekt" minOccurs="0"/>
+        <xs:element ref="bav21_Dateinamen_Bilddateien" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="bav01_bavarikonProjektnummer">
+    <xs:simpleType>
+      <xs:restriction base="xs:positiveInteger">
+        <xs:pattern value="[0-9][0-9][0-9][0-9]"/>
+      </xs:restriction>
+    </xs:simpleType>
+  </xs:element>
+  
+  <xs:element name="bav02_LieferID" type="idTyp"/>
+  <xs:element name="bav03_AnzeigeID" type="idTyp"/>
+  
+  <xs:complexType name="idTyp">
+    <xs:simpleContent>
+      <xs:extension base="tokenNotEmpty">
+        <xs:attribute name="typ" use="required" type="idTypListe"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:simpleType name="idTypListe"> 
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="Datensatznummer"/>
+      <xs:enumeration value="Fotonummer"/>
+      <xs:enumeration value="Inventarnummer"/>
+      <xs:enumeration value="Katalognummer"/>
+      <xs:enumeration value="Normnummer"/>
+      <xs:enumeration value="Signatur"/>
+      <xs:enumeration value="Zugangsnummer"/>
+      <xs:enumeration value="Institutionsunabhängiger Identifikator"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="bav04_DatenlieferndeInstitution" type="tokenNotEmptyHasGndIdNotEmpty"/>
+  <xs:element name="bav05_BestandshaltendeInstitution" type="tokenNotEmptyHasGndIdNotEmpty"/>
+  <xs:element name="bav06_BeteiligteInstitution" type="tokenNotEmptyHasGndIdNotEmpty"/>
+  <xs:element name="bav07_Titel_Name_Objektbezeichnung" type="tokenNotEmpty"/>
+  <xs:element name="bav08_Alternativtitel" type="tokenNotEmpty"/>
+
+  <xs:simpleType name="tokenNotEmpty">
+    <xs:restriction base="xs:token">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="tokenNotEmptyHasGndId">
+    <xs:simpleContent>
+      <xs:extension base="tokenNotEmpty">
+        <xs:attribute name="gnd-id" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="tokenNotEmptyHasGndIdNotEmpty">
+    <xs:simpleContent>
+      <xs:extension base="tokenNotEmpty">
+        <xs:attribute name="gnd-id" use="required" type="tokenNotEmpty" />
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="bav09_Beschreibungstext">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="deutsch"/>
+        <xs:element ref="englisch" minOccurs="0"/>
+        <xs:element ref="Autorenangabe" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="deutsch" type="tokenNotEmpty"/>
+  <xs:element name="englisch" type="tokenNotEmpty"/>
+  <xs:element name="Autorenangabe" type="tokenNotEmpty"/>
+
+  <xs:element name="bav10_Objektkategorie" type="kategorieTyp" />
+
+  <xs:simpleType name="kategorieTyp">
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="Alltagsgegenstand"/>
+      <xs:enumeration value="Archäologisches Objekt"/>
+      <xs:enumeration value="Archivgut"/>
+      <xs:enumeration value="Bauwerk"/>
+      <xs:enumeration value="Briefe"/>
+      <xs:enumeration value="Buch"/>
+      <xs:enumeration value="Druckgraphik"/>
+      <xs:enumeration value="Einblattdruck"/>
+      <xs:enumeration value="Film"/>
+      <xs:enumeration value="Geld"/>
+      <xs:enumeration value="Fotografie"/>
+      <xs:enumeration value="Handschrift"/>
+      <xs:enumeration value="Karte"/>
+      <xs:enumeration value="Kleidung und Textilien"/>
+      <xs:enumeration value="Kunsthandwerk"/>
+      <xs:enumeration value="Malerei"/>
+      <xs:enumeration value="Musikalie"/>
+      <xs:enumeration value="Modell"/>
+      <xs:enumeration value="Mineral"/>
+      <xs:enumeration value="Nachlass"/>
+      <xs:enumeration value="Planzeichnung"/>
+      <xs:enumeration value="Präparat und Fossil"/>
+      <xs:enumeration value="Skulptur"/>
+      <xs:enumeration value="Technisches Objekt"/>
+      <xs:enumeration value="Tondokument"/>
+      <xs:enumeration value="Urkunde"/>
+      <xs:enumeration value="Waffe"/>
+      <xs:enumeration value="Zeichnung"/>
+      <xs:enumeration value="Zeremonialobjekt"/>
+      <xs:enumeration value="Datensatz"/>
+      <xs:enumeration value="Biogramm (Datensatz)"/>
+      <xs:enumeration value="Geografikum (Datensatz)"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="bav11_Schlagwort_Thema">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="tokenNotEmpty">
+          <xs:attribute name="typ" use="required" type="personOrtSachbegriffTyp"/>
+          <xs:attribute name="gnd-id" use="optional" type="tokenNotEmpty"/>
+          <xs:attribute name="odb-id" use="optional" type="tokenNotEmpty"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="personOrtSachbegriffTyp"> 
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="Person"/>
+      <xs:enumeration value="Ort"/>
+      <xs:enumeration value="Sachbegriff"/>
+      <xs:enumeration value="undefined"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="bav12_Ereignis">
+    <xs:complexType>
+      <xs:choice>
+        <xs:sequence>
+          <xs:element ref="Hauptverantwortlichkeit" maxOccurs="unbounded"/>
+          <xs:element ref="Beteiligung" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element ref="Ort" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element ref="Zeit" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element ref="Beteiligung" maxOccurs="unbounded"/>
+          <xs:element ref="Ort" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element ref="Zeit" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element ref="Ort" maxOccurs="unbounded"/>
+          <xs:element ref="Zeit" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:sequence>
+          <xs:element ref="Zeit" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:choice>
+      <xs:attribute name="typ" use="required" type="ereignisTyp"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="ereignisTyp">
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="Entstehung"/>
+      <xs:enumeration value="Fund/Ausgrabung"/>
+      <xs:enumeration value="Provenienz"/>
+      <xs:enumeration value="Geburt"/>
+      <xs:enumeration value="Tod"/>
+     </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="Hauptverantwortlichkeit" type="personInstitutionTyp"/>
+  <xs:element name="Beteiligung" type="personInstitutionTyp"/>
+  
+  <xs:complexType name="personInstitutionTyp">
+    <xs:simpleContent>
+      <xs:extension base="tokenNotEmpty">
+        <xs:attribute name="typ" use="required" type="personInstitutionTypListe"/>
+        <xs:attribute name="gnd-id" use="optional" type="tokenNotEmpty"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:simpleType name="personInstitutionTypListe">
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="Person"/>
+      <xs:enumeration value="Institution"/>
+      <xs:enumeration value="undefined"/>
+     </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="Ort">
+    <xs:complexType>
+      <xs:simpleContent>
+        <xs:extension base="tokenNotEmpty">
+          <xs:attribute name="gnd-id" use="optional" type="tokenNotEmpty"/>
+          <xs:attribute name="odb-id" use="optional" type="tokenNotEmpty"/>
+        </xs:extension>
+      </xs:simpleContent>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Zeit" type="tokenNotEmpty"/>
+
+  <xs:element name="bav13_Sprache" type="tokenNotEmpty"/>
+  <xs:element name="bav14_Material" type="tokenNotEmpty"/>
+  <xs:element name="bav15_Umfang_Abmessungen_Laufzeit" type="tokenNotEmpty"/>
+  <xs:element name="bav16_Bemerkung" type="tokenNotEmpty"/>
+  <xs:element name="bav17_RechtedeklarationMetadaten" type="tokenNotEmpty" fixed="CC0"/>
+  <xs:element name="bav18_RechtedeklarationBeschreibungstext" type="rechteTyp"/>
+  <xs:element name="bav19_RechtedeklarationDigitalisat" type="rechteTyp"/>
+  
+  <xs:simpleType name="rechteTyp">
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="CC0"/>
+      <xs:enumeration value="PDM"/>
+      <xs:enumeration value="CC BY 4.0"/>
+      <xs:enumeration value="CC BY-SA 4.0"/>
+      <xs:enumeration value="CC BY-ND 4.0"/>
+      <xs:enumeration value="CC BY-NC 4.0"/>
+      <xs:enumeration value="CC BY-NC-SA 4.0"/>
+      <xs:enumeration value="CC BY-NC-ND 4.0"/>
+      <xs:enumeration value="NoC-NC"/>
+      <xs:enumeration value="NoC-CR"/>
+      <xs:enumeration value="NoC-OKLR"/>
+      <xs:enumeration value="InC"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="bav20_Permalink_DigitalesObjekt" type="tokenNotEmpty"/>
+  <xs:element name="bav21_Dateinamen_Bilddateien" type="tokenNotEmpty"/>
+  <Kulturobjekt>
+    <bav01_bavarikonProjektnummer>1234</bav01_bavarikonProjektnummer>
+    <bav02_LieferID typ="Datensatznummer">277fbb40-c5ac-11e9-893a-a37e5cdc9651</bav02_LieferID>
+    <bav03_AnzeigeID typ="Inventarnummer">A-001</bav03_AnzeigeID>
+    <bav04_DatenlieferndeInstitution gnd-id="GND-0001">Staatliche Museen</bav04_DatenlieferndeInstitution>
+    <bav05_BestandshaltendeInstitution gnd-id="GND-0002">Kunstsammlung</bav05_BestandshaltendeInstitution>
+    <bav06_BeteiligteInstitution gnd-id="GND-0003">Restaurierungswerkstatt</bav06_BeteiligteInstitution>
+    <bav07_Titel_Name_Objektbezeichnung>Landschaftsdarstellungen u.a. mit Jagdszenen und Jahreszeitenzyklus</bav07_Titel_Name_Objektbezeichnung>
+    <bav08_Alternativtitel>Jahreszeiten und Jagd</bav08_Alternativtitel>
+    <bav09_Beschreibungstext>
+      <deutsch>Wandmalerei mit verschiedenen Landschaftsdarstellungen, Jagdszenen und einem Zyklus der Jahreszeiten.</deutsch>
+      <englisch>Wall painting with various landscapes, hunting scenes, and a cycle of the seasons.</englisch>
+      <Autorenangabe>Dr. Mustermann</Autorenangabe>
+    </bav09_Beschreibungstext>
+    <bav10_Objektkategorie>Malerei</bav10_Objektkategorie>
+    <bav11_Schlagwort_Thema typ="Sachbegriff">Wandmalerei</bav11_Schlagwort_Thema>
+    <bav12_Ereignis typ="Entstehung">
+      <Zeit>1776-1778</Zeit>
+    </bav12_Ereignis>
+    <bav13_Sprache>de</bav13_Sprache>
+    <bav14_Material>Farbe auf Putz</bav14_Material>
+    <bav15_Umfang_Abmessungen_Laufzeit>ca. 3 x 5 m</bav15_Umfang_Abmessungen_Laufzeit>
+    <bav16_Bemerkung>Teilweise restauriert</bav16_Bemerkung>
+    <bav17_RechtedeklarationMetadaten>CC0</bav17_RechtedeklarationMetadaten>
+    <bav18_RechtedeklarationBeschreibungstext>CC BY 4.0</bav18_RechtedeklarationBeschreibungstext>
+    <bav19_RechtedeklarationDigitalisat>CC BY 4.0</bav19_RechtedeklarationDigitalisat>
+    <bav20_Permalink_DigitalesObjekt>https://www.example.org/objekt/277fbb40-c5ac-11e9-893a-a37e5cdc9651</bav20_Permalink_DigitalesObjekt>
+    <bav21_Dateinamen_Bilddateien>bild1.jpg bild2.jpg</bav21_Dateinamen_Bilddateien>
+  </Kulturobjekt>
+
+  <Kulturobjekt>
+    <bav01_bavarikonProjektnummer>5678</bav01_bavarikonProjektnummer>
+    <bav02_LieferID typ="Datensatznummer">46d47900-c5ab-11e9-b229-6b499a37f581</bav02_LieferID>
+    <bav03_AnzeigeID typ="Inventarnummer">A-002</bav03_AnzeigeID>
+    <bav04_DatenlieferndeInstitution gnd-id="GND-0004">Landesmuseum</bav04_DatenlieferndeInstitution>
+    <bav05_BestandshaltendeInstitution gnd-id="GND-0005">Historische Sammlung</bav05_BestandshaltendeInstitution>
+    <bav07_Titel_Name_Objektbezeichnung>Deckengemälde mit mythologischen Szenen</bav07_Titel_Name_Objektbezeichnung>
+    <bav10_Objektkategorie>Malerei</bav10_Objektkategorie>
+    <bav12_Ereignis typ="Entstehung">
+      <Zeit>1750</Zeit>
+    </bav12_Ereignis>
+    <bav13_Sprache>de</bav13_Sprache>
+    <bav17_RechtedeklarationMetadaten>CC0</bav17_RechtedeklarationMetadaten>
+    <bav19_RechtedeklarationDigitalisat>CC BY 4.0</bav19_RechtedeklarationDigitalisat>
+    <bav20_Permalink_DigitalesObjekt>https://www.example.org/objekt/46d47900-c5ab-11e9-b229-6b499a37f581</bav20_Permalink_DigitalesObjekt>
+    <bav21_Dateinamen_Bilddateien>bild3.jpg</bav21_Dateinamen_Bilddateien>
+  </Kulturobjekt>
+</xs:schema>

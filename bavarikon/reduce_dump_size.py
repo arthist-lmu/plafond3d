@@ -29,7 +29,13 @@ def remove_keys_from_entities(input_file, output_file, keys_to_remove):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-    keys_to_remove = ["shortText", "text", "bibliography"]
+    # All these keys are not usable in the Lieferformat.xml
+    keys_to_remove = [
+        "text",
+        "bibliography",
+        "modificationDate",
+        "createionDate",
+    ]
     # Example: set ids_to_extract to a list of IDs, or leave as None to process all
     # remove_keys_from_entities.ids_to_extract = ['id1', 'id2', ...]
     remove_keys_from_entities.ids_to_extract = [
@@ -37,5 +43,8 @@ if __name__ == "__main__":
         "46d47900-c5ab-11e9-b229-6b499a37f581",
         "277fbb40-c5ac-11e9-893a-a37e5cdc9651",
     ]
-    # For the full dataset
-    # remove_keys_from_entities('dumps/deckenmalerei.eu/2025_02/entities.json', 'bavarikon/entities small.json', keys_to_remove)
+    remove_keys_from_entities(
+        "dumps/deckenmalerei.eu/2025_02/entities.json",
+        "bavarikon/entities small.json",
+        keys_to_remove,
+    )
